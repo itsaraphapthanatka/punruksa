@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { paynoiCreate, paynoiCheck, paynoiCancel } from '@/lib/paynoi'
+import { getDonationsEnabled } from '@/lib/settings'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -14,6 +15,11 @@ export async function createPublicDonation(prevState: unknown, formData: FormDat
   const {
     data: { user },
   } = await supabase.auth.getUser() // อาจไม่มี (guest) ก็ได้
+
+  // เช็คว่าเปิดรับบริจาคอยู่ไหม (กันการเรียก action ตรงๆ ขณะปิดรับ)
+  if (!(await getDonationsEnabled())) {
+    return { error: 'ขณะนี้ปิดรับบริจาคชั่วคราว ขออภัยในความไม่สะดวก' }
+  }
 
   const amount = Math.floor(Number(formData.get('amount')))
   if (!amount || amount <= 0) return { error: 'กรุณาระบุจำนวนเงินที่ถูกต้อง' }

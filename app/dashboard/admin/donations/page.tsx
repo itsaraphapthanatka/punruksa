@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getDonationsEnabled } from '@/lib/settings'
+import { DonationsToggle } from './DonationsToggle'
 
 interface DonationRow {
   id: string
@@ -39,6 +41,7 @@ export default async function AdminDonationsPage() {
     .order('created_at', { ascending: false })
     .limit(200)
   const rows = (data ?? []) as unknown as DonationRow[]
+  const donationsEnabled = await getDonationsEnabled()
 
   const completed = rows.filter((r) => r.status === 'completed')
   const totalFund = completed.reduce((s, r) => s + Number(r.amount_paid ?? r.amount ?? 0), 0)
@@ -63,9 +66,12 @@ export default async function AdminDonationsPage() {
 
   return (
     <>
-      <div className="dashboard-header">
-        <h1>💜 รายการบริจาค</h1>
-        <p>เงินบริจาคเข้ากองกลางผ่านพร้อมเพย์ ({rows.length} รายการล่าสุด)</p>
+      <div className="dashboard-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <h1>💜 รายการบริจาค</h1>
+          <p>เงินบริจาคเข้ากองกลางผ่านพร้อมเพย์ ({rows.length} รายการล่าสุด)</p>
+        </div>
+        <DonationsToggle initialEnabled={donationsEnabled} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 20 }}>

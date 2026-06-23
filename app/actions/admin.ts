@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 // ---------- Audit Log Helper ----------
@@ -109,4 +110,33 @@ export async function rejectCase(caseId: string, reason: string) {
   revalidatePath('/dashboard/cases')
 
   return { success: true }
+}
+
+// ---------- เปิด/ปิด การรับบริจาคสาธารณะ (หน้า /donate) ----------
+export async function setDonationsEnabled(enabled: boolean) {
+  const supabase = await createClient()
+  const user = await requireAdmin(supabase)
+
+  // เขียนผ่าน service-role (app_settings ไม่เปิด policy update ให้ client)
+  const admin = createAdminClient()
+  const { error } = await admin.from('app_settings').upsert(
+    {
+      key: 'donations_enabled',
+      value: enabled,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: 'key' }
+  )
+
+  if (error) {
+    return { error: 'บันทึกการตั้งค่าไม่สำเร็จ: ' + error.message }
+  }
+
+  await writeAuditLog(supabase, 'donations_toggle', { enabled }, user.id)
+
+  revalidatePath('/dashboard/admin/donations')
+  revalidatePath('/donate')
+
+  return { success: true, enabled }
 }

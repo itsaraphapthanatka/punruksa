@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { DonateForm } from './DonateForm'
+import { getDonationsEnabled } from '@/lib/settings'
 
-export default function PublicDonatePage() {
+export default async function PublicDonatePage() {
+  const donationsEnabled = await getDonationsEnabled()
   return (
     <div style={{ background: '#f6f7f9', minHeight: '100vh' }}>
       {/* NAV */}
@@ -23,7 +25,19 @@ export default function PublicDonatePage() {
           เงินบริจาคเข้า <b>กองกลาง</b> เพื่อช่วยเคสที่ผ่านการสุ่มโหวตอนุมัติ — โปร่งใส ตรวจสอบได้ · ไม่ต้องสมัครสมาชิก
         </p>
 
-        <DonateForm />
+        {donationsEnabled ? (
+          <DonateForm />
+        ) : (
+          <div style={{ background: '#fff', border: '1px solid #edeef7', borderRadius: 16, padding: 28, textAlign: 'center' }}>
+            <div style={{ fontSize: 44, marginBottom: 8 }}>🙏</div>
+            <h2 style={{ margin: 0, fontSize: 20 }}>ปิดรับบริจาคชั่วคราว</h2>
+            <p style={{ color: '#717892', margin: '8px 0 16px', lineHeight: 1.7 }}>
+              ขณะนี้เราปิดรับบริจาคเข้ากองกลางเป็นการชั่วคราว ขอบคุณสำหรับน้ำใจของทุกท่าน 💜<br />
+              กรุณากลับมาใหม่อีกครั้ง
+            </p>
+            <Link href="/" style={{ color: '#5560d8', fontWeight: 700 }}>← กลับหน้าแรก</Link>
+          </div>
+        )}
       </div>
     </div>
   )
