@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getImpactStats, getCaseCovers } from '@/lib/stats'
+import { getImpactStats, getCaseCovers, getRecentSupporters } from '@/lib/stats'
+import { SPONSORS, monogram } from '@/lib/sponsors'
 import { getLocale } from '@/lib/i18n'
-import { dict, statusTag, progressOf, animalIcon } from '@/lib/dict'
+import { dict, statusTag, animalIcon, STEP_KEYS, caseStep } from '@/lib/dict'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
 interface OpenCase {
@@ -11,6 +12,14 @@ interface OpenCase {
 }
 
 const STEP_ICONS = ['📝', '🔎', '🎲', '🗳️', '💸']
+
+function fmtDate(iso: string, l: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(l === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch {
+    return ''
+  }
+}
 
 export default async function LandingPage() {
   const L = await getLocale()
@@ -25,6 +34,7 @@ export default async function LandingPage() {
     .limit(6)
   const openCases = (openData ?? []) as OpenCase[]
   const covers = await getCaseCovers(openCases.map((c) => c.id))
+  const supporters = await getRecentSupporters(8)
 
   return (
     <div className="tj">
@@ -34,23 +44,17 @@ export default async function LandingPage() {
         .wrap{max-width:1140px;margin:0 auto;padding:0 22px}
         @keyframes tjRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
         .rv{opacity:0;animation:tjRise .7s cubic-bezier(.2,.7,.2,1) forwards}
-        @keyframes lpBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-        @keyframes lpTail{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(22deg)}}
-        @keyframes lpBlink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
-        @keyframes lpPaw{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(17deg)}}
-        .lp-dog{animation:lpBob 3.4s ease-in-out infinite;transform-box:fill-box}
-        .lp-tail{animation:lpTail .6s ease-in-out infinite;transform-box:fill-box;transform-origin:14% 86%}
-        .lp-eyes{animation:lpBlink 4.4s infinite;transform-box:fill-box;transform-origin:center}
-        .lp-paw{animation:lpPaw .7s ease-in-out infinite;transform-box:fill-box;transform-origin:55% 96%}
         .btnCoral{background:var(--coral);color:#fff;transition:background .15s,transform .15s,box-shadow .15s;box-shadow:0 6px 16px rgba(102,126,234,.32)}
         .btnCoral:hover{background:var(--coral-d);transform:translateY(-1px);box-shadow:0 10px 22px rgba(102,126,234,.4)}
         .btnLight{background:#fff;color:var(--ink);border:1.5px solid var(--line);transition:border-color .15s,color .15s}
         .btnLight:hover{border-color:var(--coral);color:var(--coral)}
+        .btnGhost{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.55);backdrop-filter:blur(4px);transition:background .15s,border-color .15s,transform .15s}
+        .btnGhost:hover{background:rgba(255,255,255,.22);border-color:#fff;transform:translateY(-1px)}
         .navlink{color:#41454d;font-weight:600;font-size:14.5px}
         .navlink:hover{color:var(--coral)}
         .tjcard{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(30,30,50,.05);transition:transform .2s,box-shadow .2s}
         .tjcard:hover{transform:translateY(-5px);box-shadow:0 16px 34px rgba(30,30,50,.12)}
-        @media(max-width:860px){ .heroGrid{grid-template-columns:1fr!important;text-align:center} .heroDog{margin:6px auto 0!important;order:-1} .heroCta,.heroMini{justify-content:center} }
+        @media(max-width:760px){ .heroPhoto{min-height:auto!important;padding:66px 22px 72px!important} .heroMini{gap:22px!important} }
       `}</style>
 
       {/* NAVBAR */}
@@ -67,58 +71,29 @@ export default async function LandingPage() {
             <Link href="#how" className="navlink">{d.nav.how}</Link>
             <Link href="/login" className="navlink">{d.nav.login}</Link>
             <LanguageSwitcher locale={L} />
-            <Link href="/login" className="btnCoral" style={{ padding: '9px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14.5 }}>{d.nav.donate}</Link>
+            <Link href="/donate" className="btnCoral" style={{ padding: '9px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14.5 }}>{d.nav.donate}</Link>
           </div>
         </div>
       </nav>
 
       {/* HERO */}
-      <header style={{ background: 'linear-gradient(180deg,#f1f3ff,#fff 78%)' }}>
-        <div className="wrap heroGrid" style={{ display: 'grid', gridTemplateColumns: '1.05fr .95fr', gap: 36, alignItems: 'center', padding: '56px 22px 60px' }}>
-          <div>
-            <div className="rv" style={{ animationDelay: '.04s', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--coral-soft)', color: 'var(--coral-d)', fontWeight: 700, fontSize: 13, padding: '7px 14px', borderRadius: 999, marginBottom: 20 }}>{d.hero.eyebrow}</div>
-            <h1 className="rv" style={{ animationDelay: '.1s', margin: 0, fontSize: 'clamp(36px,5vw,56px)', fontWeight: 800, lineHeight: 1.12, letterSpacing: '-1px' }}>
-              {d.hero.title1}<br /><span style={{ color: 'var(--coral)' }}>{d.hero.title2}</span>
+      <header style={{ position: 'relative', backgroundColor: '#0d0b20', backgroundImage: 'linear-gradient(90deg, rgba(8,6,20,.9) 0%, rgba(8,6,20,.74) 34%, rgba(10,8,26,.4) 60%, rgba(12,10,30,.12) 82%, rgba(0,0,0,0) 100%), url(/hero-dog.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+        <div className="wrap heroPhoto" style={{ minHeight: 560, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '96px 22px 100px', color: '#fff' }}>
+          <div style={{ maxWidth: 580 }}>
+            <div className="rv" style={{ animationDelay: '.04s', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.14)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,.28)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '7px 14px', borderRadius: 999, marginBottom: 20 }}>{d.hero.eyebrow}</div>
+            <h1 className="rv" style={{ animationDelay: '.1s', margin: 0, fontSize: 'clamp(36px,5.2vw,58px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-1px', color: '#fff', textShadow: '0 0 2px rgba(0,0,0,.85), 0 1px 6px rgba(0,0,0,.65), 0 3px 18px rgba(0,0,0,.5)' }}>
+              {d.hero.title1}<br /><span style={{ color: '#c3ccff' }}>{d.hero.title2}</span>
             </h1>
-            <p className="rv" style={{ animationDelay: '.2s', margin: '18px 0 0', fontSize: 17, lineHeight: 1.7, color: 'var(--muted)', maxWidth: 460 }}>{d.hero.subtitle}</p>
+            <p className="rv" style={{ animationDelay: '.2s', margin: '18px 0 0', fontSize: 17.5, lineHeight: 1.7, color: 'rgba(255,255,255,.95)', maxWidth: 480, textShadow: '0 1px 12px rgba(0,0,0,.6)' }}>{d.hero.subtitle}</p>
             <div className="rv heroCta" style={{ animationDelay: '.3s', display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
-              <Link href="/login" className="btnCoral" style={{ padding: '14px 28px', borderRadius: 12, fontWeight: 700, fontSize: 16 }}>{d.hero.ctaDonate}</Link>
-              <Link href="#cases" className="btnLight" style={{ padding: '14px 26px', borderRadius: 12, fontWeight: 700, fontSize: 16 }}>{d.hero.ctaCases}</Link>
+              <Link href="/donate" className="btnCoral" style={{ padding: '14px 28px', borderRadius: 12, fontWeight: 700, fontSize: 16 }}>{d.hero.ctaDonate}</Link>
+              <Link href="#cases" className="btnGhost" style={{ padding: '14px 26px', borderRadius: 12, fontWeight: 700, fontSize: 16 }}>{d.hero.ctaCases}</Link>
             </div>
-            <div className="rv heroMini" style={{ animationDelay: '.4s', display: 'flex', gap: 28, marginTop: 30 }}>
+            <div className="rv heroMini" style={{ animationDelay: '.4s', display: 'flex', gap: 30, marginTop: 32, textShadow: '0 1px 10px rgba(0,0,0,.6)' }}>
               {([[String(stats.totalCases), d.mini.cases], [String(stats.helpedCases), d.mini.helped], [String(stats.donorCount), d.mini.donors]] as [string, string][]).map(([v, l]) => (
-                <div key={l}><div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)' }}>{v}</div><div style={{ fontSize: 13, color: 'var(--muted)' }}>{l}</div></div>
+                <div key={l}><div style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>{v}</div><div style={{ fontSize: 13, color: 'rgba(255,255,255,.85)' }}>{l}</div></div>
               ))}
             </div>
-          </div>
-
-          <div className="heroDog rv" style={{ animationDelay: '.25s', position: 'relative', width: 320, height: 320, justifySelf: 'center' }}>
-            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 50% 45%, #dfe4fb, #eef0fd 62%, transparent 72%)' }} />
-            <div style={{ position: 'absolute', inset: 24, borderRadius: '50%', border: '2px dashed #b9c2f3' }} />
-            <svg viewBox="0 0 260 270" width="320" height="320" style={{ position: 'relative' }} role="img" aria-label="dog mascot">
-              <g className="lp-dog">
-                <g className="lp-tail"><path d="M186 184 q46 2 42 -42 q-3 -22 -24 -16 q16 10 9 29 q-8 21 -29 17 z" fill="#c98a52" /></g>
-                <ellipse cx="124" cy="182" rx="64" ry="60" fill="#d99a63" />
-                <ellipse cx="124" cy="202" rx="42" ry="38" fill="#f0d0a4" />
-                <ellipse cx="84" cy="234" rx="22" ry="14" fill="#f0d0a4" /><ellipse cx="164" cy="234" rx="22" ry="14" fill="#f0d0a4" />
-                <rect x="132" y="200" width="22" height="42" rx="11" fill="#d99a63" /><ellipse cx="143" cy="240" rx="15" ry="10" fill="#f0d0a4" />
-                <g>
-                  <path d="M82 96 L58 44 Q90 52 106 86 Z" fill="#c98a52" /><path d="M78 84 L66 56 Q84 62 94 82 Z" fill="#b9763f" />
-                  <path d="M166 96 L190 44 Q158 52 142 86 Z" fill="#c98a52" /><path d="M170 84 L182 56 Q164 62 154 82 Z" fill="#b9763f" />
-                  <ellipse cx="124" cy="106" rx="52" ry="48" fill="#d99a63" />
-                  <circle cx="90" cy="120" r="12" fill="#f4a3a3" opacity="0.45" /><circle cx="158" cy="120" r="12" fill="#f4a3a3" opacity="0.45" />
-                  <ellipse cx="124" cy="123" rx="33" ry="27" fill="#f4d6ac" />
-                  <g className="lp-eyes"><ellipse cx="105" cy="98" rx="7.5" ry="10" fill="#2a2e44" /><ellipse cx="143" cy="98" rx="7.5" ry="10" fill="#2a2e44" /><circle cx="107.5" cy="94" r="2.6" fill="#fff" /><circle cx="145.5" cy="94" r="2.6" fill="#fff" /></g>
-                  <ellipse cx="124" cy="114" rx="9.5" ry="7.5" fill="#33333f" /><circle cx="121" cy="112" r="2" fill="#6b6b7a" />
-                  <path d="M124 121 q-12 13 -22 5 M124 121 q12 13 22 5" stroke="#9a6536" strokeWidth="3.2" fill="none" strokeLinecap="round" />
-                  <ellipse cx="124" cy="133" rx="7" ry="6" fill="#f28a8a" />
-                  <path d="M86 150 q38 28 76 0" stroke="#667eea" strokeWidth="11" fill="none" strokeLinecap="round" />
-                  <circle cx="124" cy="167" r="9" fill="#ffce5c" stroke="#e9b53f" strokeWidth="2" /><circle cx="124" cy="167" r="3" fill="#e9b53f" />
-                </g>
-                <g className="lp-paw"><rect x="78" y="118" width="22" height="92" rx="11" fill="#d99a63" /><ellipse cx="89" cy="118" rx="13" ry="11" fill="#f0d0a4" /></g>
-              </g>
-            </svg>
-            <div style={{ position: 'absolute', top: 14, right: 2, background: '#fff', boxShadow: '0 6px 16px rgba(0,0,0,.1)', color: 'var(--coral-d)', fontWeight: 800, fontSize: 13, padding: '7px 13px', borderRadius: 12 }}>{d.hero.greet}</div>
           </div>
         </div>
       </header>
@@ -142,7 +117,7 @@ export default async function LandingPage() {
             <h2 style={{ margin: 0, fontSize: 'clamp(26px,3.6vw,36px)', fontWeight: 800, letterSpacing: '-.6px' }}>{d.open.title}</h2>
             <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 15 }}>{d.open.sub}</p>
           </div>
-          <Link href="/login" className="navlink" style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 15 }}>{d.open.all}</Link>
+          <Link href="/cases" className="navlink" style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 15 }}>{d.open.all}</Link>
         </div>
         {openCases.length === 0 ? (
           <div style={{ border: '1px dashed var(--line)', borderRadius: 16, padding: 52, textAlign: 'center', color: 'var(--muted)' }}>{d.open.empty}</div>
@@ -150,7 +125,7 @@ export default async function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 22 }}>
             {openCases.map((c) => {
               const tag = statusTag(L, c.status)
-              const pct = progressOf(c.status)
+              const step = caseStep(c.status)
               return (
                 <Link key={c.id} href={`/cases/${c.id}`} className="tjcard" style={{ display: 'block', color: 'inherit' }}>
                   <div style={{ position: 'relative', height: 176, background: '#f1f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -164,10 +139,22 @@ export default async function LandingPage() {
                   <div style={{ padding: 18 }}>
                     <div style={{ fontWeight: 700, fontSize: 16, lineHeight: 1.35, minHeight: 44, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.title}</div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', margin: '5px 0 14px' }}>{animalIcon(c.animal_type)} {c.animal_type} · {c.clinic_name || d.casePage.noClinic}</div>
-                    <div style={{ height: 8, background: '#f0f1f4', borderRadius: 999, overflow: 'hidden' }}><div style={{ width: `${pct}%`, height: '100%', background: 'var(--coral)', borderRadius: 999 }} /></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                      <div><span style={{ fontSize: 19, fontWeight: 800 }}>{Number(c.requested_amount).toLocaleString()}</span><span style={{ fontSize: 12, color: 'var(--muted)' }}> {d.casePage.baht}</span></div>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--coral)' }}>{L === 'en' ? 'View →' : 'ดูเคส →'}</span>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.4px', textTransform: 'uppercase', marginBottom: 9 }}>{d.casePage.reviewStatus}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+                      <span style={{ background: tag.bg, color: tag.fg, fontSize: 12.5, fontWeight: 700, padding: '4px 11px', borderRadius: 999 }}>{tag.label}</span>
+                      {step >= 0 && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{L === 'en' ? `Step ${step + 1} of ${STEP_KEYS.length}` : `ขั้นที่ ${step + 1} จาก ${STEP_KEYS.length}`}</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      {STEP_KEYS.map((_, i) => (
+                        <div key={i} style={{ flex: 1, height: 6, borderRadius: 999, background: step >= 0 && i <= step ? 'var(--coral)' : (c.status === 'rejected' ? '#fdeaea' : '#f0f1f4') }} />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                      <div>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{d.casePage.requested}</div>
+                        <div><span style={{ fontSize: 16, fontWeight: 800 }}>{Number(c.requested_amount).toLocaleString()}</span><span style={{ fontSize: 12, color: 'var(--muted)' }}> {d.casePage.baht}</span></div>
+                      </div>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--coral)' }}>{L === 'en' ? 'Details →' : 'ดูรายละเอียด →'}</span>
                     </div>
                   </div>
                 </Link>
@@ -197,6 +184,78 @@ export default async function LandingPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* SUPPORTERS */}
+      <section id="supporters" className="wrap" style={{ padding: '66px 22px 8px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <h2 style={{ margin: 0, fontSize: 'clamp(26px,3.6vw,36px)', fontWeight: 800, letterSpacing: '-.6px' }}>{d.sponsors.title}</h2>
+          <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 15 }}>{d.sponsors.sub}</p>
+        </div>
+
+        {/* พันธมิตร / โลโก้องค์กร */}
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)', textAlign: 'center', letterSpacing: '.8px', textTransform: 'uppercase', marginBottom: 16 }}>{d.sponsors.partners}</div>
+        {SPONSORS.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 18, marginBottom: 46 }}>
+            {SPONSORS.map((s) => {
+              const inner = (
+                <>
+                  <div style={{ height: 116, background: 'linear-gradient(135deg,#eef0fd,#f6f7ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {s.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.logo} alt={s.name} style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff', color: 'var(--coral-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 22, boxShadow: '0 4px 12px rgba(102,126,234,.18)' }}>{monogram(s.name)}</span>
+                    )}
+                  </div>
+                  <div style={{ padding: '14px 16px', textAlign: 'center' }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.35 }}>{s.name}</div>
+                  </div>
+                </>
+              )
+              return s.url ? (
+                <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="tjcard" style={{ display: 'block', overflow: 'hidden', color: 'inherit' }}>{inner}</a>
+              ) : (
+                <div key={s.name} className="tjcard" style={{ overflow: 'hidden' }}>{inner}</div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="tjcard" style={{ padding: '30px 24px', textAlign: 'center', marginBottom: 46 }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }}>🤝</div>
+            <div style={{ color: 'var(--muted)', marginBottom: 16, fontSize: 15 }}>{d.sponsors.partnersEmpty}</div>
+            <Link href="/donate" className="btnLight" style={{ display: 'inline-block', padding: '11px 22px', borderRadius: 11, fontWeight: 700, fontSize: 14 }}>{d.sponsors.become}</Link>
+          </div>
+        )}
+
+        {/* ผู้ร่วมบริจาคล่าสุด */}
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)', textAlign: 'center', letterSpacing: '.8px', textTransform: 'uppercase', marginBottom: 16 }}>{d.sponsors.recent}</div>
+        {supporters.length === 0 ? (
+          <div className="tjcard" style={{ padding: 40, textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>💜</div>
+            <div style={{ color: 'var(--muted)', marginBottom: 18 }}>{d.sponsors.empty}</div>
+            <Link href="/donate" className="btnCoral" style={{ display: 'inline-block', padding: '12px 26px', borderRadius: 12, fontWeight: 700, fontSize: 15 }}>{d.sponsors.become}</Link>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 18 }}>
+            {supporters.map((s) => (
+              <div key={s.id} className="tjcard" style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', background: 'linear-gradient(135deg,#eef0fd,#f6f7ff)' }}>
+                  <span style={{ width: 44, height: 44, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, boxShadow: '0 4px 12px rgba(102,126,234,.18)' }}>🐾</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{s.donor_nickname || d.sponsors.anon}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>{fmtDate(s.created_at, L)}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', fontWeight: 800, color: 'var(--coral)', fontSize: 17, whiteSpace: 'nowrap' }}>{Number(s.amount).toLocaleString()} ฿</div>
+                </div>
+                <div style={{ padding: '14px 18px', fontSize: 13.5, lineHeight: 1.6, color: s.message ? '#41454d' : 'var(--muted)' }}>
+                  {s.message ? `“${s.message}”` : d.sponsors.thanks}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginTop: 24 }}>{d.sponsors.thanks}</div>
       </section>
 
       {/* CTA */}

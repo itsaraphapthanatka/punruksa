@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { animalIcon, statusBadge, statusProgress, emergencyBadgeStyle } from './case-ui'
+import { animalIcon, statusBadge, emergencyBadgeStyle } from './case-ui'
+import { STEP_KEYS, caseStep } from '@/lib/dict'
 
 interface CardCase {
   id: string
@@ -23,7 +24,7 @@ export function CaseCard({
   ownerTag?: boolean
 }) {
   const b = statusBadge(c.status)
-  const pr = statusProgress(c.status)
+  const step = caseStep(c.status)
 
   return (
     <Link
@@ -56,15 +57,21 @@ export function CaseCard({
         <div style={{ fontSize: 12.5, color: '#909abb', margin: '4px 0 12px' }}>
           {animalIcon(c.animal_type)} {c.animal_type} · {c.clinic_name || 'ไม่ระบุคลินิก'}
         </div>
-        <div style={{ height: 7, background: '#eef0f5', borderRadius: 999, overflow: 'hidden' }}>
-          <div style={{ width: `${pr.pct}%`, height: '100%', background: pr.color, borderRadius: 999 }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#909abb', letterSpacing: '.4px', textTransform: 'uppercase' }}>สถานะการพิจารณา</span>
+          {step >= 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#909abb' }}>ขั้นที่ {step + 1}/{STEP_KEYS.length}</span>}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {STEP_KEYS.map((_, i) => (
+            <div key={i} style={{ flex: 1, height: 6, borderRadius: 999, background: step >= 0 && i <= step ? '#667eea' : (c.status === 'rejected' ? '#fdeaea' : '#eef0f5') }} />
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 12, paddingTop: 12, borderTop: '1px solid #edeef7' }}>
           <div>
-            <span style={{ fontSize: 18, fontWeight: 800, color: '#2a2e44' }}>{Number(c.requested_amount).toLocaleString()}</span>
-            <span style={{ fontSize: 12, color: '#909abb' }}> บาท</span>
+            <div style={{ fontSize: 11, color: '#909abb' }}>ยอดค่ารักษาที่ขอ</div>
+            <div><span style={{ fontSize: 16, fontWeight: 800, color: '#2a2e44' }}>{Number(c.requested_amount).toLocaleString()}</span><span style={{ fontSize: 12, color: '#909abb' }}> บาท</span></div>
           </div>
-          <div style={{ fontSize: 12.5, color: pr.color, fontWeight: 700 }}>{pr.pct}%</div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#5560d8' }}>ดูรายละเอียด →</span>
         </div>
       </div>
     </Link>

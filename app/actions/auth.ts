@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
@@ -54,20 +55,24 @@ export async function register(prevState: unknown, formData: FormData) {
   }
 
   if (authData.user) {
-    // Insert into users table
-    const { error: profileError } = await supabase.from('users').insert({
-      id: authData.user.id,
-      email,
-      full_name: fullName,
-      phone: phone || null,
-      role: 'donor',
-      is_verified: false,
-      reputation_points: 0,
-    })
+    // Insert profile via service-role — ตอน signUp ยังไม่มี session (โดยเฉพาะถ้าเปิด email confirm)
+    // ทำให้ insert ด้วย session ของผู้ใช้โดน RLS บล็อก → ผู้สมัครไม่ได้แถว profile
+    const admin = createAdminClient()
+    const { error: profileError } = await admin.from('users').upsert(
+      {
+        id: authData.user.id,
+        email,
+        full_name: fullName,
+        phone: phone || null,
+        role: 'donor',
+        is_verified: false,
+        reputation_points: 0,
+      },
+      { onConflict: 'id' }
+    )
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
-      // Don't fail registration if profile insert fails (may be handled by trigger)
     }
 
     // Write audit log
@@ -120,39 +125,6 @@ export async function authenticate(prevState: unknown, formData: FormData) {
     return register(prevState, formData)
   }
   return login(prevState, formData)
-}
-
-// ---------- Demo login (ปุ่มเลือกบทบาทเดโม) ----------
-// ใช้บัญชีจาก seed_demo_users.sql — เดโมเท่านั้น (ควรปิด/ลบใน production)
-const DEMO_PASSWORD = 'demo1234'
-const DEMO_EMAILS: Record<string, string> = {
-  caretaker: 'caretaker@demo.local',
-  approver: 'approver1@demo.local',
-  admin: 'admin@demo.local',
-  donor: 'donor@demo.local',
-}
-
-export async function demoLogin(prevState: unknown, formData: FormData) {
-  const role = String(formData.get('role') || '')
-  const email = DEMO_EMAILS[role]
-  if (!email) return { error: 'บทบาทเดโมไม่ถูกต้อง' }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password: DEMO_PASSWORD,
-  })
-
-  if (error) {
-    return { error: 'ยังไม่มีบัญชีเดโม — รัน supabase/seed_demo_users.sql ใน Supabase ก่อน' }
-  }
-
-  if (data.user) {
-    await writeAuditLog(supabase, 'user_login', { email, demo: true }, data.user.id)
-  }
-
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
 }
 
 // ---------- Logout ----------

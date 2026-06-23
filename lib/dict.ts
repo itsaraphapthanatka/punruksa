@@ -10,10 +10,11 @@ interface Strings {
   how: { title: string; sub: string; steps: { t: string; s: string }[] }
   cta: { title: string; sub: string; signup: string; login: string }
   footer: { tag: string; mvp: string }
+  sponsors: { title: string; sub: string; partners: string; partnersEmpty: string; recent: string; anon: string; empty: string; become: string; thanks: string }
   status: Record<string, string>
   emergency: string
   casePage: {
-    crumb: string; requested: string; baht: string; progress: string; donate: string; poolNote: string
+    crumb: string; requested: string; baht: string; progress: string; reviewStatus: string; donate: string; poolNote: string
     b1: string; b2: string; b3: string; story: string; pdpa: string; evidence: string; bill: string; estimate: string
     updates: string; noUpdates: string; openedOn: string; noClinic: string
   }
@@ -22,16 +23,16 @@ interface Strings {
 export const dict: Record<Locale, Strings> = {
   th: {
     brand: 'ปันรักษา',
-    nav: { cases: 'เคส', how: 'วิธีการ', login: 'เข้าสู่ระบบ', donate: 'ร่วมบริจาค', allCases: '← เคสทั้งหมด', home: 'หน้าแรก / เคส' },
+    nav: { cases: 'เคส', how: 'วิธีการ', login: 'เข้าสู่ระบบ', donate: 'สมทบทุนช่วยน้อง', allCases: '← เคสทั้งหมด', home: 'หน้าแรก / เคส' },
     hero: {
       eyebrow: '🐾 โปร่งใส · สุ่มอนุมัติ · ตรวจสอบได้',
       title1: 'ช่วยเหลือสัตว์ที่ต้องการ', title2: 'ด้วยพลังของทุกคน',
       subtitle: 'เปิดเคสขอค่ารักษา แนบหลักฐาน แล้วให้สมาชิกที่ถูกสุ่มเป็นกรรมการร่วมพิจารณา ทุกขั้นตอนเปิดให้ตรวจสอบได้',
-      ctaDonate: 'ร่วมบริจาค', ctaCases: 'ดูเคสที่เปิดอยู่', greet: 'สวัสดี! 👋',
+      ctaDonate: 'สมทบทุนช่วยน้อง', ctaCases: 'ดูเคสที่เปิดอยู่', greet: 'สวัสดี! 👋',
     },
     mini: { cases: 'เคสทั้งหมด', helped: 'ช่วยสำเร็จ', donors: 'ผู้บริจาค' },
-    stats: { fund: 'ยอดกองทุน (เดโม)', donors: 'ผู้บริจาค', cases: 'เคสทั้งหมด', helped: 'ช่วยสำเร็จ' },
-    open: { title: 'เคสที่กำลังเปิด', sub: 'ร่วมเป็นส่วนหนึ่งของการช่วยเหลือ', all: 'ดูทั้งหมด →', empty: 'ยังไม่มีเคสที่กำลังเปิด' },
+    stats: { fund: 'ยอดกองทุน', donors: 'ผู้บริจาค', cases: 'เคสทั้งหมด', helped: 'ช่วยสำเร็จ' },
+    open: { title: 'เคสที่กำลังเปิด', sub: 'เคสที่ชุมชนกำลังร่วมพิจารณา — ทุกการบริจาคเข้ากองกลางเดียว ไม่ได้ระดมทุนแยกรายเคส', all: 'ดูทั้งหมด →', empty: 'ยังไม่มีเคสที่กำลังเปิด' },
     how: {
       title: 'ระบบทำงานอย่างไร', sub: 'โปร่งใสกว่าโพสต์ขอบริจาคทั่วไป ด้วยการตัดสินใจแบบกระจายอำนาจ',
       steps: [
@@ -43,11 +44,12 @@ export const dict: Record<Locale, Strings> = {
       ],
     },
     cta: { title: 'พร้อมช่วยเหลือสัตว์ที่ต้องการแล้วหรือยัง?', sub: 'เริ่มต้นใช้งานฟรี — ร่วมบริจาค หรือสมัครเป็นกรรมการโหวต', signup: 'สมัครสมาชิก', login: 'เข้าสู่ระบบ' },
-    footer: { tag: 'กองทุนรักษาสัตว์โดยชุมชน', mvp: 'เวอร์ชันแรก (MVP) · ยังไม่เปิดระบบการเงิน' },
+    footer: { tag: 'กองทุนรักษาสัตว์โดยชุมชน', mvp: 'เวอร์ชันแรก (MVP) · รับบริจาคผ่านพร้อมเพย์' },
+    sponsors: { title: 'ผู้สนับสนุน', sub: 'ขอบคุณทุกพลังที่ร่วมดูแลสัตว์ป่วยไปกับเรา', partners: 'พันธมิตร & องค์กรผู้สนับสนุน', partnersEmpty: 'พื้นที่สำหรับโลโก้พันธมิตร — สนใจร่วมเป็นผู้สนับสนุน? ติดต่อเราได้เลย', recent: 'ผู้ร่วมบริจาคล่าสุด', anon: 'ผู้สนับสนุนใจดี', empty: 'ยังไม่มีผู้บริจาค — ร่วมเป็นผู้สนับสนุนคนแรก! 💜', become: 'ร่วมเป็นผู้สนับสนุน', thanks: 'ขอบคุณทุกการสนับสนุน 💜' },
     status: { received: 'รับเรื่อง', verifying: 'กำลังตรวจเอกสาร', voting: 'กำลังโหวต', approved: 'อนุมัติแล้ว', paid: 'จ่ายแล้ว', closed: 'จ่ายแล้ว · ปิดเคส', rejected: 'ไม่ผ่าน' },
     emergency: '⚡ ฉุกเฉิน',
     casePage: {
-      crumb: 'หน้าแรก / เคส', requested: 'ยอดค่ารักษาที่ขอ', baht: 'บาท', progress: 'ความคืบหน้า', donate: '💜 ร่วมบริจาคเข้ากองทุน',
+      crumb: 'หน้าแรก / เคส', requested: 'ยอดค่ารักษาที่ขอ', baht: 'บาท', progress: 'ความคืบหน้า', reviewStatus: 'สถานะการพิจารณา', donate: '💜 ร่วมบริจาคเข้ากองทุน',
       poolNote: 'เงินเข้ากองกลาง ช่วยเคสที่ผ่านมติการสุ่มโหวต — โปร่งใส ตรวจสอบได้',
       b1: '🎲 อนุมัติด้วยกรรมการที่ถูกสุ่ม', b2: '🔒 ปิดบังตัวตนเจ้าของ (PDPA)', b3: '📋 บันทึกทุกขั้นใน audit trail',
       story: 'เรื่องราวของเคสนี้', pdpa: '🔒 ข้อมูลส่วนตัวของเจ้าของสัตว์ถูกปิดบังตามนโยบาย PDPA — เปิดเผยเฉพาะข้อมูลที่จำเป็นต่อการพิจารณา',
@@ -57,16 +59,16 @@ export const dict: Record<Locale, Strings> = {
   },
   en: {
     brand: 'PanRaksa',
-    nav: { cases: 'Cases', how: 'How it works', login: 'Log in', donate: 'Donate', allCases: '← All cases', home: 'Home / Cases' },
+    nav: { cases: 'Cases', how: 'How it works', login: 'Log in', donate: 'Help a pet', allCases: '← All cases', home: 'Home / Cases' },
     hero: {
       eyebrow: '🐾 Transparent · Random approval · Auditable',
       title1: 'Help animals in need', title2: 'with the power of community',
       subtitle: 'Open a case for treatment costs, attach evidence, then let randomly-selected members review it together. Every step is open to inspection.',
-      ctaDonate: 'Donate', ctaCases: 'See open cases', greet: 'Hello! 👋',
+      ctaDonate: 'Help a pet', ctaCases: 'See open cases', greet: 'Hello! 👋',
     },
     mini: { cases: 'Cases', helped: 'Helped', donors: 'Donors' },
-    stats: { fund: 'Fund balance (demo)', donors: 'Donors', cases: 'Total cases', helped: 'Helped' },
-    open: { title: 'Open cases', sub: 'Be part of the help', all: 'See all →', empty: 'No open cases yet' },
+    stats: { fund: 'Fund balance', donors: 'Donors', cases: 'Total cases', helped: 'Helped' },
+    open: { title: 'Open cases', sub: 'Cases under community review — all donations go to one shared pool, not per-case fundraising', all: 'See all →', empty: 'No open cases yet' },
     how: {
       title: 'How it works', sub: 'More transparent than ordinary donation posts — with decentralized decisions',
       steps: [
@@ -78,11 +80,12 @@ export const dict: Record<Locale, Strings> = {
       ],
     },
     cta: { title: 'Ready to help animals in need?', sub: 'Free to start — donate or become a voting member', signup: 'Sign up', login: 'Log in' },
-    footer: { tag: 'Community animal treatment fund', mvp: 'Early version (MVP) · Payments not yet enabled' },
+    footer: { tag: 'Community animal treatment fund', mvp: 'Early version (MVP) · PromptPay donations' },
+    sponsors: { title: 'Our supporters', sub: 'Thank you to everyone helping us care for animals in need', partners: 'Partners & sponsoring organizations', partnersEmpty: 'Space for partner logos — interested in sponsoring? Get in touch', recent: 'Recent supporters', anon: 'Kind supporter', empty: 'No donations yet — be the first supporter! 💜', become: 'Become a supporter', thanks: 'Thank you for every bit of support 💜' },
     status: { received: 'Received', verifying: 'Under review', voting: 'Voting', approved: 'Approved', paid: 'Paid', closed: 'Paid · Closed', rejected: 'Rejected' },
     emergency: '⚡ Urgent',
     casePage: {
-      crumb: 'Home / Cases', requested: 'Requested treatment cost', baht: 'THB', progress: 'Progress', donate: '💜 Donate to the fund',
+      crumb: 'Home / Cases', requested: 'Requested treatment cost', baht: 'THB', progress: 'Progress', reviewStatus: 'Review status', donate: '💜 Donate to the fund',
       poolNote: 'Funds go to the central pool to help cases approved by random vote — transparent and auditable.',
       b1: '🎲 Approved by a randomly-selected jury', b2: '🔒 Owner identity hidden (PDPA)', b3: '📋 Every step logged in audit trail',
       story: "This case's story", pdpa: "🔒 The owner's personal information is hidden per PDPA — only details necessary for review are shown.",
@@ -109,6 +112,11 @@ export function statusTag(l: Locale, s: string): { label: string; bg: string; fg
 
 export const progressOf = (s: string) =>
   ({ received: 12, verifying: 25, voting: 60, approved: 90, paid: 100, closed: 100, rejected: 100 } as Record<string, number>)[s] ?? 0
+
+// ลำดับขั้นตอนการพิจารณา (workflow) — ใช้แสดงแถบ step ทั้งหน้าแรกและหน้ารายละเอียด
+export const STEP_KEYS = ['received', 'verifying', 'voting', 'approved', 'paid']
+// index ขั้นปัจจุบัน (closed = ขั้นสุดท้าย, rejected = -1 คือหลุดเส้นทาง)
+export const caseStep = (s: string): number => (s === 'closed' ? STEP_KEYS.length - 1 : STEP_KEYS.indexOf(s))
 
 export const animalIcon = (t: string) =>
   t.includes('แมว') ? '🐱' : t.includes('สุนัข') || t.includes('หมา') ? '🐶' : t.includes('นก') ? '🐦' : '🐾'

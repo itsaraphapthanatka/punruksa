@@ -26,21 +26,32 @@ export default async function PaymentsPage() {
     .eq('status', 'approved')
     .order('created_at', { ascending: true })
 
+  // แนบเอกสารของแต่ละเคส (รูป/บิล/ใบประเมิน) ให้แอดมินดูก่อนจ่าย
+  const casesWithDocs = await Promise.all(
+    (approvedCases || []).map(async (c) => {
+      const { data: docs } = await supabase
+        .from('case_documents')
+        .select('id, doc_type, file_url')
+        .eq('case_id', c.id)
+      return { ...c, documents: docs || [] }
+    })
+  )
+
   return (
     <>
       <div className="dashboard-header">
         <h1>💸 บันทึกการจ่ายเงิน</h1>
-        <p>เคสที่อนุมัติแล้ว รอบันทึกการจ่ายจากมูลนิธิ ({approvedCases?.length || 0} เคส)</p>
+        <p>เคสที่อนุมัติแล้ว รอบันทึกการจ่ายจากมูลนิธิ ({casesWithDocs.length} เคส)</p>
       </div>
 
-      {(!approvedCases || approvedCases.length === 0) ? (
+      {casesWithDocs.length === 0 ? (
         <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💰</div>
           <h2 style={{ marginBottom: '0.5rem' }}>ไม่มีเคสรอจ่ายเงิน</h2>
           <p style={{ color: 'var(--color-text-secondary)' }}>เคสทั้งหมดถูกจ่ายเงินแล้ว</p>
         </div>
       ) : (
-        <PaymentClient cases={approvedCases} />
+        <PaymentClient cases={casesWithDocs} />
       )}
     </>
   )

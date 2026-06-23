@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { AdminVerifyClient } from './AdminVerifyClient'
+import { OpenRoundsAdmin, type OpenRound } from './OpenRoundsAdmin'
 
 export default async function AdminVerifyPage() {
   const supabase = await createClient()
@@ -56,6 +58,31 @@ export default async function AdminVerifyPage() {
     })
   )
 
+  // รอบโหวตที่เปิดอยู่ (อ่านผ่าน service-role — หน้านี้ผ่านการเช็ค admin แล้ว)
+  const admin = createAdminClient()
+  const { data: openRoundsRaw } = await admin
+    .from('vote_rounds')
+    .select('id, case_id, required_approvals, sampled_count, closes_at, cases(title, mode)')
+    .eq('status', 'open')
+    .order('closes_at', { ascending: true })
+  const openRounds: OpenRound[] = await Promise.all(
+    (openRoundsRaw || []).map(async (r) => {
+      const { count: approves } = await admin.from('votes').select('id', { count: 'exact', head: true }).eq('vote_round_id', r.id).eq('decision', 'approve')
+      const { count: voted } = await admin.from('vote_assignments').select('id', { count: 'exact', head: true }).eq('vote_round_id', r.id).eq('has_voted', true)
+      const c = r.cases as unknown as { title?: string; mode?: string } | null
+      return {
+        id: r.id,
+        title: c?.title || '',
+        mode: c?.mode || 'normal',
+        required: r.required_approvals,
+        sampled: r.sampled_count,
+        voted: voted || 0,
+        approves: approves || 0,
+        closesAt: r.closes_at,
+      }
+    })
+  )
+
   return (
     <>
       <div className="dashboard-header">
@@ -74,6 +101,8 @@ export default async function AdminVerifyPage() {
       ) : (
         <AdminVerifyClient cases={casesWithDocs} />
       )}
+
+      <OpenRoundsAdmin rounds={openRounds} />
     </>
   )
 }

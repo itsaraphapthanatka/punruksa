@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState, type CSSProperties } from 'react'
-import { authenticate, demoLogin } from '@/app/actions/auth'
+import { authenticate } from '@/app/actions/auth'
 
 const fieldStyle: CSSProperties = {
   width: '100%',
@@ -20,13 +20,6 @@ const labelStyle: CSSProperties = {
   marginBottom: 6,
 }
 
-const demoRoles = [
-  { icon: '🛟', label: 'ผู้บริจาค/ผู้ดูแล', sub: 'เปิดเคส', key: 'caretaker' },
-  { icon: '⚖️', label: 'กรรมการโหวต', sub: 'พิจารณาเคส', key: 'approver' },
-  { icon: '🛡️', label: 'แอดมิน', sub: 'ตรวจ+ดูแลระบบ', key: 'admin' },
-  { icon: '👁️', label: 'ผู้เยี่ยมชม', sub: 'ดูเคสสาธารณะ', key: 'donor' },
-]
-
 export default function AuthForm({
   initialMode = 'login',
 }: {
@@ -37,10 +30,9 @@ export default function AuthForm({
   const [consent, setConsent] = useState(false)
   const [notice, setNotice] = useState('')
   const [state, formAction, pending] = useActionState(authenticate, null)
-  const [demoState, demoAction, demoPending] = useActionState(demoLogin, null)
 
   const login = mode === 'login'
-  const errorMsg = state?.error || demoState?.error
+  const errorMsg = state?.error
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex' }}>
@@ -118,16 +110,15 @@ export default function AuthForm({
             <p style={{ margin: '6px 0 0', fontSize: 14, color: '#838aa3' }}>{login ? 'เข้าสู่ระบบเพื่อจัดการเคสและร่วมโหวต' : 'สร้างบัญชีเพื่อเปิดเคสและร่วมเป็นกรรมการ'}</p>
           </div>
 
-          {/* LINE login (ยังไม่เปิดใช้งาน — คงไว้เพื่อความตรงดีไซน์) */}
-          <button
-            type="button"
+          {/* LINE login */}
+          <a
+            href="/api/auth/line/login"
             className="af-line"
-            onClick={() => setNotice('เข้าสู่ระบบด้วย LINE ยังไม่เปิดใช้งานในเวอร์ชันนี้ — ใช้อีเมล/รหัสผ่านด้านล่างได้เลย')}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#06c755', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#06c755', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 14, textDecoration: 'none' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.5 2 2 5.7 2 10.2c0 4 3.6 7.4 8.5 8 .3.07.8.2.9.5.08.27.05.7.03.97l-.15.9c-.04.27-.2 1.04.91.57s6.04-3.56 8.24-6.1C21.4 13.3 22 11.8 22 10.2 22 5.7 17.5 2 12 2z" /></svg>
             เข้าสู่ระบบด้วย LINE
-          </button>
+          </a>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
             <div style={{ flex: 1, height: 1, background: '#e3e4f0' }} />
@@ -245,29 +236,6 @@ export default function AuthForm({
             </button>
           </div>
 
-          {/* demo role quick-fill (ยังไม่เชื่อมบัญชีจริง — คงไว้เพื่อความตรงดีไซน์) */}
-          <div style={{ marginTop: 26, borderTop: '1px solid #e9eaf3', paddingTop: 18 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: '#9aa0b8', letterSpacing: '.4px', marginBottom: 10 }}>เข้าใช้แบบเดโม (เลือกบทบาท)</div>
-            <form action={demoAction} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-              {demoRoles.map((r) => (
-                <button
-                  key={r.key}
-                  type="submit"
-                  name="role"
-                  value={r.key}
-                  className="af-demo"
-                  disabled={demoPending}
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, border: '1px solid #e7e8f2', background: '#fff', borderRadius: 11, padding: '10px 12px', cursor: demoPending ? 'wait' : 'pointer', textAlign: 'left', opacity: demoPending ? 0.6 : 1 }}
-                >
-                  <span style={{ fontSize: 18, flex: 'none' }}>{r.icon}</span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: 'block', fontWeight: 700, fontSize: 13, color: '#2a2e44' }}>{r.label}</span>
-                    <span style={{ display: 'block', fontSize: 11, color: '#9aa0b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.sub}</span>
-                  </span>
-                </button>
-              ))}
-            </form>
-          </div>
         </div>
       </div>
     </div>

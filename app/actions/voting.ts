@@ -1,7 +1,36 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { tallyAndClose } from '@/lib/vote-tally'
 import { revalidatePath } from 'next/cache'
+
+// ---------- สรุป/ปิดรอบโหวตเดี๋ยวนี้ (แอดมิน) ----------
+export async function finalizeVoteRound(voteRoundId: string): Promise<{ success?: boolean; result?: string; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Forbidden: admin only' }
+
+  const admin = createAdminClient()
+  const res = await tallyAndClose(admin, voteRoundId)
+  if (!res.changed) return { error: 'รอบนี้ปิด/สรุปผลไปแล้ว' }
+
+  await admin.from('audit_log').insert({
+    actor_id: user.id,
+    action: 'vote_round_finalized_manual',
+    details: { vote_round_id: voteRoundId, result: res.status, approve_count: res.approves },
+  })
+
+  revalidatePath('/dashboard/admin/verify')
+  revalidatePath('/dashboard/cases')
+  revalidatePath('/')
+  return { success: true, result: res.status }
+}
 
 // ---------- Audit Log Helper ----------
 async function writeAuditLog(
@@ -143,6 +172,24 @@ export async function openVoteRound(caseId: string) {
     user.id,
     caseId
   )
+
+  // แจ้งเตือนกรรมการที่ล็อกอินด้วย LINE (best effort — ไม่ทำให้เปิดรอบล้มถ้าส่งไม่ได้)
+  try {
+    const { lineMessagingConfigured, lineUserIdFromEmail, pushLineText, siteUrl } = await import('@/lib/line')
+    if (lineMessagingConfigured()) {
+      const { data: sampledUsers } = await supabase.from('users').select('id, email').in('id', sampled.map((a) => a.id))
+      const link = `${siteUrl()}/dashboard/vote`
+      const msg = `🐾 ปันรักษา\nคุณถูกสุ่มเป็น "กรรมการ" พิจารณาเคสใหม่!\nช่วยอ่านรายละเอียดและลงมติภายในเวลาที่กำหนด 🗳️\n${link}`
+      await Promise.allSettled(
+        (sampledUsers || []).map((u) => {
+          const lid = lineUserIdFromEmail(u.email)
+          return lid ? pushLineText(lid, msg) : Promise.resolve(false)
+        })
+      )
+    }
+  } catch (e) {
+    console.error('LINE notify error:', e)
+  }
 
   revalidatePath('/dashboard/admin/verify')
   revalidatePath(`/dashboard/cases/${caseId}`)

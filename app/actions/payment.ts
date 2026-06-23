@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 // ---------- Audit Log Helper ----------
@@ -71,12 +72,17 @@ export async function recordPayment(prevState: unknown, formData: FormData) {
     .from('case-files')
     .getPublicUrl(fileName)
 
-  // Save receipt as document
-  await supabase.from('case_documents').insert({
+  // Save receipt as document — ผ่าน service-role เพราะ policy case_docs_insert_owner
+  // ให้เฉพาะเจ้าของเคส insert ได้ (admin ไม่ใช่เจ้าของ จะโดน RLS บล็อก)
+  const admin = createAdminClient()
+  const { error: docError } = await admin.from('case_documents').insert({
     case_id: caseId,
     doc_type: 'bill',
     file_url: publicUrl.publicUrl,
   })
+  if (docError) {
+    return { error: 'บันทึกสลิปไม่สำเร็จ: ' + docError.message }
+  }
 
   // Update status to paid
   await supabase

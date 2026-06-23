@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { animalIcon, statusBadge, emergencyBadgeStyle, statusProgress } from '../../case-ui'
+import { animalIcon, statusBadge, emergencyBadgeStyle } from '../../case-ui'
 import { UpdateForm } from './UpdateForm'
 
 const FLOW = ['received', 'voting', 'approved', 'closed'] as const
@@ -29,7 +29,7 @@ export default async function CaseDetailPage(props: PageProps<'/dashboard/cases/
     .from('audit_log').select('id, action, details, created_at, actor_id').eq('case_id', id).order('created_at', { ascending: true })
 
   const { data: updates } = await supabase
-    .from('case_updates').select('id, body, created_at').eq('case_id', id).order('created_at', { ascending: false })
+    .from('case_updates').select('*').eq('case_id', id).order('created_at', { ascending: false })
 
   const { data: userProfile } = await supabase.from('users').select('role').eq('id', user!.id).single()
   const isOwner = caseData.created_by === user?.id
@@ -37,7 +37,6 @@ export default async function CaseDetailPage(props: PageProps<'/dashboard/cases/
   const canSeeOwnerInfo = isOwner || isAdmin
 
   const b = statusBadge(caseData.status)
-  const p = statusProgress(caseData.status)
   const curIdx = caseData.status === 'rejected' ? -1 : FLOW.indexOf(caseData.status)
 
   return (
@@ -74,10 +73,6 @@ export default async function CaseDetailPage(props: PageProps<'/dashboard/cases/
             )
           })}
         </div>
-        <div style={{ height: 8, background: '#eef0f5', borderRadius: 999, overflow: 'hidden', marginTop: 18 }}>
-          <div style={{ width: `${p.pct}%`, height: '100%', background: p.color, borderRadius: 999 }} />
-        </div>
-        <div style={{ fontSize: 12, color: '#9aa0b8', marginTop: 6 }}>ความคืบหน้า {p.pct}%</div>
         {caseData.status === 'rejected' && (
           <div style={{ marginTop: 14, background: '#fef2f2', color: '#b91c1c', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600 }}>เคสนี้ถูกตีกลับ / โหวตไม่ผ่าน</div>
         )}
@@ -135,7 +130,17 @@ export default async function CaseDetailPage(props: PageProps<'/dashboard/cases/
             {updates.map((u) => (
               <div key={u.id} style={{ borderLeft: '3px solid #667eea', padding: '2px 0 2px 12px' }}>
                 <div style={{ fontSize: 12, color: '#9aa0b8' }}>{new Date(u.created_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
-                <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{u.body}</div>
+                {u.body && <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{u.body}</div>}
+                {u.attachments?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                    {u.attachments.map((url: string, i: number) => /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt="attachment" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8, border: '1px solid #e9eaf3' }} /></a>
+                    ) : (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #e9eaf3', borderRadius: 8, padding: '7px 12px', fontSize: 13, color: '#41454d', fontWeight: 600 }}>📎 ไฟล์แนบ</a>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
