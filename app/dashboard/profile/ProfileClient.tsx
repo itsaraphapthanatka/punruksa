@@ -1,7 +1,7 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
-import { updateProfile, changePassword, requestApproverRole, disconnectLine } from '@/app/actions/profile'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
+import { updateProfile, changePassword, requestApproverRole, disconnectLine, uploadAvatar } from '@/app/actions/profile'
 
 const card: React.CSSProperties = { background: '#fff', border: '1px solid #edeef7', borderRadius: 16, padding: 22, marginBottom: 18 }
 const label: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }
@@ -16,11 +16,21 @@ export function ProfileClient({
   lineAvailable,
   lineNotice,
 }: {
-  profile: { full_name: string; phone: string; email: string; role: string; is_verified: boolean; line_connected: boolean; line_via_login: boolean }
+  profile: { full_name: string; phone: string; email: string; role: string; is_verified: boolean; line_connected: boolean; line_via_login: boolean; avatar_url: string | null }
   pendingRequest: boolean
   lineAvailable: boolean
   lineNotice: { ok: boolean; text: string } | null
 }) {
+  const [avState, avAction, avPending] = useActionState(uploadAvatar, null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const avInputRef = useRef<HTMLInputElement>(null)
+  const avatarSrc = preview || profile.avatar_url || null
+  const avInitial = (profile.full_name || '?').trim().charAt(0).toUpperCase()
+
+  // ล้าง preview เมื่ออัปโหลดสำเร็จ (รูปจริงจะมาจาก profile.avatar_url ที่ revalidate แล้ว)
+  useEffect(() => {
+    if (avState?.success) setPreview(null)
+  }, [avState])
   const [pState, pAction, pPending] = useActionState(updateProfile, null)
   const [pwState, pwAction, pwPending] = useActionState(changePassword, null)
   const [reqBusy, startReq] = useTransition()
@@ -53,6 +63,40 @@ export function ProfileClient({
 
   return (
     <div style={{ maxWidth: 560 }}>
+      {/* รูปโปรไฟล์ */}
+      <div style={card}>
+        <h2 style={{ margin: '0 0 14px', fontSize: 17 }}>รูปโปรไฟล์</h2>
+        <form action={avAction} style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <div style={{ width: 88, height: 88, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#667eea,#5560d8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 34 }}>
+            {avatarSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarSrc} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              avInitial
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <input
+              ref={avInputRef}
+              name="avatar"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={avPending}
+              className="form-input"
+              style={{ marginBottom: 10 }}
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                setPreview(f ? URL.createObjectURL(f) : null)
+              }}
+            />
+            <div style={{ fontSize: 12.5, color: '#9aa0b8', marginBottom: 10 }}>PNG / JPG / WebP · ไม่เกิน 5MB</div>
+            {avState?.error && <div className="alert alert-error" style={{ marginBottom: 10 }}><span>⚠️</span> {avState.error}</div>}
+            {avState?.success && <div className="alert alert-success" style={{ marginBottom: 10 }}><span>✅</span> {avState.msg}</div>}
+            <button type="submit" className="btn btn-primary btn-sm" disabled={avPending}>{avPending ? 'กำลังอัปโหลด...' : 'อัปโหลดรูป'}</button>
+          </div>
+        </form>
+      </div>
+
       {/* ข้อมูลบัญชี */}
       <div style={card}>
         <h2 style={{ margin: '0 0 4px', fontSize: 17 }}>ข้อมูลบัญชี</h2>

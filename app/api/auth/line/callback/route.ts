@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
     if (updErr) return profileUrl('link_failed')
 
+    // ดึงรูปโปรไฟล์จาก LINE มาใช้ (เฉพาะเมื่อยังไม่มีรูป — ไม่ทับรูปที่อัปโหลดเอง)
+    if (prof.pictureUrl) {
+      await admin.from('users').update({ avatar_url: prof.pictureUrl }).eq('id', user.id).is('avatar_url', null)
+    }
+
     await admin.from('audit_log').insert({
       actor_id: user.id,
       action: 'line_connected',
@@ -71,6 +76,10 @@ export async function GET(request: NextRequest) {
     await admin.auth.admin.updateUserById(userId, { password })
     // ผูก line_user_id ให้บัญชี LINE เดิมที่อาจสร้างก่อนมี column นี้
     await admin.from('users').update({ line_user_id: lineId }).eq('id', userId)
+    // ดึงรูป LINE มาใช้เมื่อยังไม่มีรูป (ไม่ทับรูปที่อัปโหลดเอง)
+    if (prof.pictureUrl) {
+      await admin.from('users').update({ avatar_url: prof.pictureUrl }).eq('id', userId).is('avatar_url', null)
+    }
   } else {
     const { data: created, error } = await admin.auth.admin.createUser({
       email,
@@ -81,7 +90,7 @@ export async function GET(request: NextRequest) {
     if (error || !created.user) return fail('line_create')
     userId = created.user.id
     await admin.from('users').upsert(
-      { id: userId, email, full_name: displayName, role: 'donor', is_verified: false, reputation_points: 0, line_user_id: lineId },
+      { id: userId, email, full_name: displayName, role: 'donor', is_verified: false, reputation_points: 0, line_user_id: lineId, avatar_url: prof.pictureUrl || null },
       { onConflict: 'id' }
     )
   }

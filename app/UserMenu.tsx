@@ -41,7 +41,7 @@ export function UserMenu({ user }: { user: NavUser }) {
       <style>{`
         .um-trigger{display:flex;align-items:center;gap:8px;background:transparent;border:1px solid #e3e4f0;border-radius:999px;padding:5px 12px 5px 6px;cursor:pointer;font-weight:700;font-size:14px;color:#26282e}
         .um-trigger:hover{background:#f1f2fb;border-color:#c9cdf2}
-        .um-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#667eea,#5560d8);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+        .um-avatar{width:30px;height:30px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#667eea,#5560d8);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
         .um-name{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .um-panel{position:absolute;top:calc(100% + 8px);right:0;width:260px;background:#fff;border:1px solid #ededf1;border-radius:14px;box-shadow:0 12px 40px rgba(20,22,40,.16);z-index:200;overflow:hidden;animation:umIn .14s ease-out}
         @keyframes umIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
@@ -56,7 +56,14 @@ export function UserMenu({ user }: { user: NavUser }) {
       `}</style>
 
       <button type="button" className="um-trigger" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="menu">
-        <span className="um-avatar">{initial}</span>
+        <span className="um-avatar">
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatarUrl} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            initial
+          )}
+        </span>
         <span className="um-name">{user.name}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transition: 'transform .15s', transform: open ? 'rotate(180deg)' : 'none' }}>
           <polyline points="6 9 12 15 18 9" />

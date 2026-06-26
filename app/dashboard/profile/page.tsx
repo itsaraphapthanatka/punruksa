@@ -41,6 +41,11 @@ export default async function ProfilePage({
     profile = (full.data as unknown as ProfileRow) ?? null
   }
 
+  // รูปโปรไฟล์ (เผื่อ migration 015 ยังไม่ลง → ไม่มี column avatar_url → null)
+  let avatarUrl: string | null = null
+  const av = await supabase.from('users').select('avatar_url').eq('id', user.id).single()
+  if (!av.error) avatarUrl = (av.data as unknown as { avatar_url: string | null })?.avatar_url ?? null
+
   // มีคำขอ pending ไหม (เผื่อ migration 009 ยังไม่ลง → ถือว่าไม่มี)
   let pendingRequest = false
   const { data: req } = await supabase.from('role_requests').select('id').eq('user_id', user.id).eq('status', 'pending').maybeSingle()
@@ -66,6 +71,7 @@ export default async function ProfilePage({
           is_verified: !!profile?.is_verified,
           line_connected: !!profile?.line_user_id || lineViaLogin,
           line_via_login: lineViaLogin,
+          avatar_url: avatarUrl,
         }}
         pendingRequest={pendingRequest}
         lineAvailable={lineConfigured() && lineMessagingConfigured()}

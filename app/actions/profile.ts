@@ -1,7 +1,38 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+
+// ---------- อัปโหลดรูปโปรไฟล์ ----------
+export async function uploadAvatar(prevState: unknown, formData: FormData) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+
+  const file = formData.get('avatar')
+  if (!(file instanceof File) || file.size === 0) return { error: 'กรุณาเลือกรูป' }
+  if (file.size > 5 * 1024 * 1024) return { error: 'ไฟล์ใหญ่เกิน 5MB' }
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return { error: 'รองรับเฉพาะ PNG / JPG / WebP' }
+
+  // อัปโหลดผ่าน service-role (เลี่ยงปัญหา storage RLS)
+  const admin = createAdminClient()
+  const ext = (file.name.split('.').pop() || 'png').toLowerCase()
+  const path = `${user.id}/${Date.now()}.${ext}`
+  const { error: upErr } = await admin.storage.from('avatars').upload(path, file, { contentType: file.type, upsert: true })
+  if (upErr) return { error: 'อัปโหลดไม่สำเร็จ: ' + upErr.message }
+  const url = admin.storage.from('avatars').getPublicUrl(path).data.publicUrl
+
+  const { error } = await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
+  if (error) return { error: 'บันทึกไม่สำเร็จ: ' + error.message }
+
+  revalidatePath('/dashboard/profile')
+  revalidatePath('/dashboard', 'layout')
+  revalidatePath('/')
+  return { success: true, msg: 'อัปเดตรูปโปรไฟล์แล้ว', url }
+}
 
 // ---------- แก้ไขโปรไฟล์ ----------
 export async function updateProfile(prevState: unknown, formData: FormData) {

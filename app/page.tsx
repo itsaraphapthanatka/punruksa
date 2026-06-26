@@ -4,6 +4,8 @@ import { getImpactStats, getCaseCovers, getRecentSupporters } from '@/lib/stats'
 import { monogram } from '@/lib/sponsors'
 import { getSponsors } from '@/lib/sponsors-data'
 import { getNavUser } from '@/lib/nav-user'
+import { getComments } from '@/lib/comments'
+import { ChatWidget } from './ChatWidget'
 import { getLocale } from '@/lib/i18n'
 import { dict, statusTag, animalIcon, STEP_KEYS, caseStep } from '@/lib/dict'
 import { ShareButtons } from './ShareButtons'
@@ -30,7 +32,12 @@ export default async function LandingPage() {
   const stats = await getImpactStats()
   const SPONSORS = await getSponsors()
   const navUser = await getNavUser()
+  // แสดงข้อความแชทเฉพาะสมาชิกที่ login — guest ไม่ดึงข้อมูลคอมเมนต์เลย
+  const comments = navUser ? await getComments() : []
   const supabase = await createClient()
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser()
   const { data: openData } = await supabase
     .from('cases')
     .select('id, title, animal_type, clinic_name, requested_amount, mode, status, created_at')
@@ -393,6 +400,9 @@ export default async function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* แชทลอย — ร่วมแสดงความคิดเห็น */}
+      <ChatWidget comments={comments} canComment={!!navUser} currentUserId={authUser?.id ?? null} />
     </div>
   )
 }

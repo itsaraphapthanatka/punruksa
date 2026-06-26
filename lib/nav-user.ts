@@ -5,6 +5,7 @@ export interface NavUser {
   role: string
   totalDonated: number
   casesVoted: number
+  avatarUrl: string | null
 }
 
 // ข้อมูลผู้ใช้สำหรับ dropdown บน navbar (ชื่อ, ยอดบริจาครวม, จำนวนเคสที่เคยโหวต)
@@ -47,11 +48,17 @@ export async function getNavUser(): Promise<NavUser | null> {
       if (cid) caseIds.add(cid)
     }
 
+    // รูปโปรไฟล์ (เผื่อ migration 015 ยังไม่ลง → column ไม่มี → null, ไม่ทำให้เมนูหาย)
+    let avatarUrl: string | null = null
+    const av = await supabase.from('users').select('avatar_url').eq('id', user.id).single()
+    if (!av.error) avatarUrl = (av.data as unknown as { avatar_url: string | null })?.avatar_url ?? null
+
     return {
       name: profile.full_name || 'ผู้ใช้',
       role: profile.role || 'donor',
       totalDonated,
       casesVoted: caseIds.size,
+      avatarUrl,
     }
   } catch {
     return null

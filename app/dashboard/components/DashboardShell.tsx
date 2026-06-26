@@ -94,6 +94,7 @@ export function DashboardShell({
         </Link>
 
         <nav className="ds-nav">
+          <Link href="/" className="ds-link">🌐 หน้าเว็บไซต์</Link>
           {baseNav.map(navLink)}
           {isAdmin && (
             <>
