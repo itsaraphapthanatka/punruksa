@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { getLocale } from '@/lib/i18n'
 import { dict } from '@/lib/dict'
 import { NavMenu } from '../NavMenu'
-import { PlatformDonateForm } from './PlatformDonateForm'
+import { SupportMethods } from './SupportMethods'
 import { punpayConfigured, getPlatformSupport } from '@/lib/punpay'
+import { punslipConfigured } from '@/lib/punslip'
 
 export const metadata: Metadata = {
   title: 'สนับสนุนค่าดูแลระบบ — ปันรักษา',
@@ -18,7 +19,10 @@ const card: React.CSSProperties = {
 export default async function SupportPlatformPage() {
   const L = await getLocale()
   const d = dict[L]
-  const payReady = punpayConfigured()
+  const punpayReady = punpayConfigured()
+  const promptpay = process.env.PLATFORM_PROMPTPAY || null
+  const promptpayName = process.env.PLATFORM_PROMPTPAY_NAME || null
+  const slipReady = punslipConfigured() && Boolean(promptpay)
   const support = await getPlatformSupport(12)
 
   const fmtDate = (s: string) => {
@@ -104,14 +108,7 @@ export default async function SupportPlatformPage() {
           <p style={{ fontSize: 13.5, color: '#717892', margin: '0 0 16px', lineHeight: 1.7 }}>
             เลือกจำนวนที่สะดวก แล้วชำระผ่านระบบที่ปลอดภัย — ทุกบาทมีค่ามาก 🙏
           </p>
-          {payReady ? (
-            <PlatformDonateForm />
-          ) : (
-            <div style={{ ...card, marginBottom: 0, textAlign: 'center', color: '#9aa0b8' }}>
-              <div style={{ fontSize: 30, marginBottom: 6 }}>🏦</div>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>ระบบชำระเงินกำลังจัดเตรียม</div>
-            </div>
-          )}
+          <SupportMethods slipReady={slipReady} punpayReady={punpayReady} promptpay={promptpay} promptpayName={promptpayName} />
         </div>
 
         {/* ผู้สนับสนุนค่าดูแลระบบ */}
