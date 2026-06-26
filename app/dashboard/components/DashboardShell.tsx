@@ -31,8 +31,11 @@ const baseNav = [
 const adminNav = [
   { href: '/dashboard/admin/users', label: 'สมาชิก' },
   { href: '/dashboard/admin/verify', label: 'ตรวจเอกสาร' },
-  { href: '/dashboard/admin/donations', label: 'เงินบริจาค' },
+  { href: '/dashboard/admin/donations', label: 'บริจาคกองทุน' },
+  { href: '/dashboard/admin/platform-donations', label: 'ค่าดูแลระบบ' },
+  { href: '/dashboard/admin/sponsors', label: 'ผู้สนับสนุน' },
   { href: '/dashboard/admin/payments', label: 'จ่ายเงิน' },
+  { href: '/dashboard/admin/visits', label: 'ผู้เข้าชม' },
   { href: '/dashboard/admin/audit', label: 'Audit' },
 ]
 
@@ -80,14 +83,9 @@ export function DashboardShell({
 
       <aside className="ds-side">
         <Link href="/dashboard" className="ds-brand">
-          <span className="app-brand-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
-              <circle cx="6.5" cy="9" r="2.1" />
-              <circle cx="11" cy="6.2" r="2.1" />
-              <circle cx="16" cy="6.2" r="2.1" />
-              <circle cx="20" cy="9.6" r="1.9" />
-              <path d="M13 12c-2.3 0-3.7 1.5-4.8 2.9C7 16.4 5.4 17.4 5.4 19.2 5.4 20.8 6.7 22 8.4 22c1.3 0 2.4-.6 3.4-.6.9 0 2 .6 3.4.6 1.7 0 3-1.2 3-2.8 0-1.8-1.6-2.8-2.8-4.3C14.5 13.5 13.1 12 13 12z" />
-            </svg>
+          <span className="app-brand-icon" style={{ background: '#fff', overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.jpg" alt="ปันรักษา" width={38} height={38} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </span>
           <div>
             <div className="app-brand-name">ปันรักษา</div>

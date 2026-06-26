@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { updateProfile, changePassword, requestApproverRole } from '@/app/actions/profile'
+import { updateProfile, changePassword, requestApproverRole, disconnectLine } from '@/app/actions/profile'
 
 const card: React.CSSProperties = { background: '#fff', border: '1px solid #edeef7', borderRadius: 16, padding: 22, marginBottom: 18 }
 const label: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }
@@ -13,15 +13,23 @@ const ROLE_LABEL: Record<string, string> = {
 export function ProfileClient({
   profile,
   pendingRequest,
+  lineAvailable,
+  lineNotice,
 }: {
-  profile: { full_name: string; phone: string; email: string; role: string; is_verified: boolean }
+  profile: { full_name: string; phone: string; email: string; role: string; is_verified: boolean; line_connected: boolean; line_via_login: boolean }
   pendingRequest: boolean
+  lineAvailable: boolean
+  lineNotice: { ok: boolean; text: string } | null
 }) {
   const [pState, pAction, pPending] = useActionState(updateProfile, null)
   const [pwState, pwAction, pwPending] = useActionState(changePassword, null)
   const [reqBusy, startReq] = useTransition()
   const [reqMsg, setReqMsg] = useState<string | null>(pendingRequest ? 'มีคำขอรออนุมัติอยู่' : null)
   const [requested, setRequested] = useState(pendingRequest)
+
+  const [lineConnected, setLineConnected] = useState(profile.line_connected)
+  const [lineBusy, startLine] = useTransition()
+  const [lineMsg, setLineMsg] = useState<string | null>(lineNotice?.text ?? null)
 
   function doRequest() {
     startReq(async () => {
@@ -31,7 +39,17 @@ export function ProfileClient({
     })
   }
 
+  function doDisconnectLine() {
+    startLine(async () => {
+      const r = await disconnectLine()
+      if (r.error) setLineMsg('❌ ' + r.error)
+      else { setLineMsg('✅ ' + (r.msg || 'ยกเลิกการเชื่อมต่อแล้ว')); setLineConnected(false) }
+    })
+  }
+
   const canRequest = profile.role === 'donor' || profile.role === 'caretaker' || profile.role === 'clinic'
+  // กรรมการ / แอดมิน เป็นกลุ่มเป้าหมายหลักที่ต้องรับแจ้งเตือนโหวต
+  const showLineCard = profile.role === 'approver' || profile.role === 'admin'
 
   return (
     <div style={{ maxWidth: 560 }}>
@@ -65,6 +83,59 @@ export function ProfileClient({
           <button type="submit" className="btn btn-primary btn-sm" disabled={pwPending}>{pwPending ? 'กำลังเปลี่ยน...' : 'เปลี่ยนรหัสผ่าน'}</button>
         </form>
       </div>
+
+      {/* เชื่อมต่อ LINE (สำหรับกรรมการ/แอดมิน รับแจ้งเตือนโหวต) */}
+      {showLineCard && (
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <span style={{ width: 30, height: 30, borderRadius: 8, background: '#06c755', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                <path d="M12 2C6.5 2 2 5.6 2 10.1c0 4 3.6 7.4 8.4 8 .33.07.78.22.9.5.1.26.07.66.03.92l-.14.88c-.04.26-.2 1.02.9.56s5.95-3.5 8.12-6h0C21.46 13.4 22 11.8 22 10.1 22 5.6 17.5 2 12 2z" />
+              </svg>
+            </span>
+            <h2 style={{ margin: 0, fontSize: 17 }}>เชื่อมต่อ LINE</h2>
+          </div>
+          <p style={{ fontSize: 13.5, color: '#717892', margin: '0 0 14px', lineHeight: 1.7 }}>
+            เชื่อมบัญชี LINE เพื่อรับ<b>แจ้งเตือนเมื่อถูกสุ่มให้พิจารณาอนุมัติเคส</b> จะได้ไม่พลาดรอบโหวต
+            {' '}(อย่าลืมเพิ่มบัญชีทางการ <b>ปันรักษา</b> เป็นเพื่อนใน LINE ด้วย)
+          </p>
+
+          {lineMsg && (
+            <div style={{ marginBottom: 12, fontSize: 14, fontWeight: 600, color: '#41454d' }}>{lineMsg}</div>
+          )}
+
+          {!lineAvailable ? (
+            <div style={{ fontSize: 13, color: '#9aa0b8' }}>ระบบ LINE ยังไม่พร้อมใช้งาน</div>
+          ) : profile.line_via_login ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#e6f7ef', color: '#127a52', fontWeight: 700, fontSize: 13 }}>
+                ✅ เชื่อมต่อแล้ว
+              </span>
+              <span style={{ fontSize: 12.5, color: '#9aa0b8' }}>ผ่านการเข้าสู่ระบบด้วย LINE — ไม่ต้องเชื่อมต่อเพิ่ม</span>
+            </div>
+          ) : lineConnected ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#e6f7ef', color: '#127a52', fontWeight: 700, fontSize: 13 }}>
+                ✅ เชื่อมต่อแล้ว
+              </span>
+              <button onClick={doDisconnectLine} disabled={lineBusy} className="btn btn-secondary btn-sm">
+                {lineBusy ? 'กำลังยกเลิก...' : 'ยกเลิกการเชื่อมต่อ'}
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/api/line/connect"
+              className="btn btn-sm"
+              style={{ background: '#06c755', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                <path d="M12 2C6.5 2 2 5.6 2 10.1c0 4 3.6 7.4 8.4 8 .33.07.78.22.9.5.1.26.07.66.03.92l-.14.88c-.04.26-.2 1.02.9.56s5.95-3.5 8.12-6h0C21.46 13.4 22 11.8 22 10.1 22 5.6 17.5 2 12 2z" />
+              </svg>
+              เชื่อมต่อ LINE
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ขอเป็นกรรมการ */}
       {profile.role === 'approver' || profile.role === 'admin' ? null : (

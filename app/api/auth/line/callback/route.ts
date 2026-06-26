@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import crypto from 'node:crypto'
-import { lineConfigured, lineExchangeToken, lineProfile, siteUrl } from '@/lib/line'
+import { lineConfigured, lineExchangeToken, lineProfile, siteUrl, isLinkState } from '@/lib/line'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
@@ -22,6 +23,42 @@ export async function GET(request: NextRequest) {
 
   const lineId = prof.userId
   const displayName = prof.displayName || 'ผู้ใช้ LINE'
+
+  // ─────────── โหมด "เชื่อมต่อ LINE" (ผู้ใช้ login อยู่แล้ว) ───────────
+  if (isLinkState(state)) {
+    const profileUrl = (p: string) => NextResponse.redirect(`${base}/dashboard/profile?line=${p}`)
+    // ต้องมี session ปัจจุบัน
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return fail('line_link_no_session')
+
+    const admin = createAdminClient()
+    // LINE นี้ถูกผูกกับบัญชีอื่นอยู่แล้วหรือไม่
+    const { data: taken } = await admin
+      .from('users')
+      .select('id')
+      .eq('line_user_id', lineId)
+      .neq('id', user.id)
+      .maybeSingle()
+    if (taken) return profileUrl('already_linked')
+
+    const { error: updErr } = await admin
+      .from('users')
+      .update({ line_user_id: lineId })
+      .eq('id', user.id)
+    if (updErr) return profileUrl('link_failed')
+
+    await admin.from('audit_log').insert({
+      actor_id: user.id,
+      action: 'line_connected',
+      details: { line_display_name: displayName },
+    })
+    const res = profileUrl('connected')
+    res.cookies.delete('line_oauth_state')
+    return res
+  }
+
+  // ─────────── โหมด login ด้วย LINE (เดิม) ───────────
   // อีเมลสังเคราะห์ — บัญชี LINE แยกจากบัญชีอีเมล/รหัสผ่าน (กันชนกัน)
   const email = `line_${lineId}@line.local`
   const password = crypto.randomUUID() + 'Aa1!'
@@ -32,6 +69,8 @@ export async function GET(request: NextRequest) {
 
   if (userId) {
     await admin.auth.admin.updateUserById(userId, { password })
+    // ผูก line_user_id ให้บัญชี LINE เดิมที่อาจสร้างก่อนมี column นี้
+    await admin.from('users').update({ line_user_id: lineId }).eq('id', userId)
   } else {
     const { data: created, error } = await admin.auth.admin.createUser({
       email,
@@ -42,7 +81,7 @@ export async function GET(request: NextRequest) {
     if (error || !created.user) return fail('line_create')
     userId = created.user.id
     await admin.from('users').upsert(
-      { id: userId, email, full_name: displayName, role: 'donor', is_verified: false, reputation_points: 0 },
+      { id: userId, email, full_name: displayName, role: 'donor', is_verified: false, reputation_points: 0, line_user_id: lineId },
       { onConflict: 'id' }
     )
   }

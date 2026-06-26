@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCaseCovers } from '@/lib/stats'
 import { getLocale } from '@/lib/i18n'
 import { dict, statusTag, animalIcon, STEP_KEYS, caseStep } from '@/lib/dict'
+import { NavMenu } from '../NavMenu'
 
 interface CaseRow {
   id: string; title: string; animal_type: string; clinic_name: string | null
@@ -52,12 +53,22 @@ export default async function PublicCasesPage({ searchParams }: { searchParams: 
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #ededf1' }}>
         <div className="pcwrap" style={{ display: 'flex', alignItems: 'center', gap: 14, height: 64 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#26282e' }}>
-            <span style={{ width: 34, height: 34, borderRadius: 10, background: '#667eea', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><circle cx="6.5" cy="9" r="2.1" /><circle cx="11" cy="6.2" r="2.1" /><circle cx="16" cy="6.2" r="2.1" /><circle cx="20" cy="9.6" r="1.9" /><path d="M13 12c-2.3 0-3.7 1.5-4.8 2.9C7 16.4 5.4 17.4 5.4 19.2 5.4 20.8 6.7 22 8.4 22c1.3 0 2.4-.6 3.4-.6.9 0 2 .6 3.4.6 1.7 0 3-1.2 3-2.8 0-1.8-1.6-2.8-2.8-4.3C14.5 13.5 13.1 12 13 12z" /></svg>
+            <span style={{ width: 34, height: 34, borderRadius: 10, background: '#fff', overflow: 'hidden', display: 'flex' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.jpg" alt="ปันรักษา" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </span>
             <span style={{ fontWeight: 800, fontSize: 17 }}>{d.brand}</span>
           </Link>
-          <Link href="/donate" style={{ marginLeft: 'auto', background: '#667eea', color: '#fff', padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}>{d.hero.ctaDonate}</Link>
+          <NavMenu
+            items={[
+              { href: '/', label: d.nav.home },
+              { href: '/cases', label: d.nav.cases },
+              { href: '/#how', label: d.nav.how },
+              { href: '/login', label: d.nav.login },
+            ]}
+            donateLabel={d.nav.donate}
+            locale={L}
+          />
         </div>
       </nav>
 

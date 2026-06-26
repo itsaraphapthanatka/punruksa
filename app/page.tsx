@@ -1,10 +1,13 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getImpactStats, getCaseCovers, getRecentSupporters } from '@/lib/stats'
-import { SPONSORS, monogram } from '@/lib/sponsors'
+import { monogram } from '@/lib/sponsors'
+import { getSponsors } from '@/lib/sponsors-data'
+import { getNavUser } from '@/lib/nav-user'
 import { getLocale } from '@/lib/i18n'
 import { dict, statusTag, animalIcon, STEP_KEYS, caseStep } from '@/lib/dict'
-import { LanguageSwitcher } from './LanguageSwitcher'
+import { ShareButtons } from './ShareButtons'
+import { NavMenu } from './NavMenu'
 
 interface OpenCase {
   id: string; title: string; animal_type: string; clinic_name: string | null
@@ -25,6 +28,8 @@ export default async function LandingPage() {
   const L = await getLocale()
   const d = dict[L]
   const stats = await getImpactStats()
+  const SPONSORS = await getSponsors()
+  const navUser = await getNavUser()
   const supabase = await createClient()
   const { data: openData } = await supabase
     .from('cases')
@@ -61,18 +66,22 @@ export default async function LandingPage() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--line)' }}>
         <div className="wrap" style={{ display: 'flex', alignItems: 'center', gap: 16, height: 66 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink)' }}>
-            <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--coral)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><circle cx="6.5" cy="9" r="2.1" /><circle cx="11" cy="6.2" r="2.1" /><circle cx="16" cy="6.2" r="2.1" /><circle cx="20" cy="9.6" r="1.9" /><path d="M13 12c-2.3 0-3.7 1.5-4.8 2.9C7 16.4 5.4 17.4 5.4 19.2 5.4 20.8 6.7 22 8.4 22c1.3 0 2.4-.6 3.4-.6.9 0 2 .6 3.4.6 1.7 0 3-1.2 3-2.8 0-1.8-1.6-2.8-2.8-4.3C14.5 13.5 13.1 12 13 12z" /></svg>
+            <span style={{ width: 36, height: 36, borderRadius: 11, overflow: 'hidden', background: '#fff', display: 'flex' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.jpg" alt="ปันรักษา" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </span>
             <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.2px' }}>{d.brand}</span>
           </Link>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 20 }}>
-            <Link href="#cases" className="navlink">{d.nav.cases}</Link>
-            <Link href="#how" className="navlink">{d.nav.how}</Link>
-            <Link href="/login" className="navlink">{d.nav.login}</Link>
-            <LanguageSwitcher locale={L} />
-            <Link href="/donate" className="btnCoral" style={{ padding: '9px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14.5 }}>{d.nav.donate}</Link>
-          </div>
+          <NavMenu
+            items={[
+              { href: '#cases', label: d.nav.cases },
+              { href: '#how', label: d.nav.how },
+              ...(navUser ? [] : [{ href: '/login', label: d.nav.login }]),
+            ]}
+            donateLabel={d.nav.donate}
+            locale={L}
+            user={navUser}
+          />
         </div>
       </nav>
 
@@ -171,18 +180,60 @@ export default async function LandingPage() {
             <h2 style={{ margin: 0, fontSize: 'clamp(26px,3.6vw,36px)', fontWeight: 800, letterSpacing: '-.6px' }}>{d.how.title}</h2>
             <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 15 }}>{d.how.sub}</p>
           </div>
+          {/* CSS-only reveal: กดการ์ด → panel ที่ตรงกันโผล่ (:target) — ไม่ต้องใช้ JS */}
+          <style>{`
+            .how-detail{ display:none; scroll-margin-top:80px; }
+            .how-detail:target{ display:block; }
+            /* เมื่อมี panel ถูกเปิด ให้ไฮไลต์การ์ดที่ตรงกัน (ผ่าน :has — fallback: ไม่ไฮไลต์) */
+          `}</style>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 16 }}>
             {d.how.steps.map((st, i) => (
-              <div key={i} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 18px', textAlign: 'center' }}>
-                <div style={{ width: 52, height: 52, margin: '0 auto 12px', borderRadius: '50%', background: 'var(--coral-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, position: 'relative' }}>
-                  {STEP_ICONS[i]}
-                  <span style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', background: 'var(--coral)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+              <a key={i} href={`#how-detail-${i}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                <div className="tjcard" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '22px 18px', textAlign: 'center', position: 'relative', height: '100%' }}>
+                  <div style={{ width: 52, height: 52, margin: '0 auto 12px', borderRadius: '50%', background: 'var(--coral-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, position: 'relative' }}>
+                    {STEP_ICONS[i]}
+                    <span style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', background: 'var(--coral)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{st.t}</div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>{st.s}</div>
+                  <span style={{ display: 'inline-block', marginTop: 10, fontSize: 12, fontWeight: 700, color: '#5560d8' }}>ดูรายละเอียด ↓</span>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{st.t}</div>
-                <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>{st.s}</div>
-              </div>
+              </a>
             ))}
           </div>
+
+          {/* STEP DETAILS — ซ่อนไว้ก่อน กดการ์ดด้านบนถึงแสดง (:target) */}
+          {d.how.details.map((sec, idx) => (
+            <div key={idx} id={`how-detail-${idx}`} className="how-detail" style={{ marginTop: 24 }}>
+              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 20, padding: 'clamp(22px,4vw,34px)', boxShadow: '0 8px 24px rgba(102,126,234,.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                  <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--coral)', color: '#fff', fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ margin: 0, fontSize: 'clamp(18px,2.4vw,23px)', fontWeight: 800, letterSpacing: '-.3px' }}>{sec.title}</h3>
+                    <p style={{ margin: '3px 0 0', color: 'var(--muted)', fontSize: 14, lineHeight: 1.6 }}>{sec.sub}</p>
+                  </div>
+                  <a href="#how" style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 700, color: '#838aa3', textDecoration: 'none', whiteSpace: 'nowrap' }}>✕ ย่อ</a>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14 }}>
+                  {sec.bullets.map((b, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 12, padding: '14px 16px', background: '#f7f8fe', border: '1px solid #ededf7', borderRadius: 12 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, boxShadow: '0 2px 6px rgba(102,126,234,.10)' }}>
+                        {b.icon}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 800, color: '#1d2030', marginBottom: 2 }}>{b.t}</div>
+                        <div style={{ fontSize: 13, color: '#5b6275', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{b.s}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {sec.foot && (
+                  <div style={{ marginTop: 18, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>📋 {sec.foot}</div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -196,16 +247,28 @@ export default async function LandingPage() {
         {/* พันธมิตร / โลโก้องค์กร */}
         <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)', textAlign: 'center', letterSpacing: '.8px', textTransform: 'uppercase', marginBottom: 16 }}>{d.sponsors.partners}</div>
         {SPONSORS.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 18, marginBottom: 46 }}>
+          <div
+            className="sponsorRail"
+            style={{
+              display: 'flex',
+              gap: 18,
+              marginBottom: 46,
+              overflowX: 'auto',
+              paddingBottom: 12,
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
+            }}
+          >
             {SPONSORS.map((s) => {
               const inner = (
                 <>
-                  <div style={{ height: 116, background: 'linear-gradient(135deg,#eef0fd,#f6f7ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', aspectRatio: '1 / 1', background: 'linear-gradient(135deg,#eef0fd,#f6f7ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {s.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={s.logo} alt={s.name} style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                      <img src={s.logo} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     ) : (
-                      <span style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff', color: 'var(--coral-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 22, boxShadow: '0 4px 12px rgba(102,126,234,.18)' }}>{monogram(s.name)}</span>
+                      <span style={{ width: '70%', aspectRatio: '1 / 1', borderRadius: '50%', background: '#fff', color: 'var(--coral-d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 38, boxShadow: '0 4px 12px rgba(102,126,234,.18)' }}>{monogram(s.name)}</span>
                     )}
                   </div>
                   <div style={{ padding: '14px 16px', textAlign: 'center' }}>
@@ -213,10 +276,16 @@ export default async function LandingPage() {
                   </div>
                 </>
               )
+              const cardStyle = {
+                flex: '0 0 auto',
+                width: 200,
+                scrollSnapAlign: 'start' as const,
+                overflow: 'hidden',
+              }
               return s.url ? (
-                <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="tjcard" style={{ display: 'block', overflow: 'hidden', color: 'inherit' }}>{inner}</a>
+                <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="tjcard" style={{ ...cardStyle, display: 'block', color: 'inherit' }}>{inner}</a>
               ) : (
-                <div key={s.name} className="tjcard" style={{ overflow: 'hidden' }}>{inner}</div>
+                <div key={s.name} className="tjcard" style={cardStyle}>{inner}</div>
               )
             })}
           </div>
@@ -256,6 +325,19 @@ export default async function LandingPage() {
           </div>
         )}
         <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginTop: 24 }}>{d.sponsors.thanks}</div>
+
+        {/* แชร์เว็บไซต์ */}
+        <div style={{ marginTop: 40, padding: '24px 22px', background: 'linear-gradient(135deg,#fff7ed,#fef3e8)', border: '1px solid #fde9c8', borderRadius: 14, textAlign: 'center' }}>
+          <div style={{ fontSize: 15.5, fontWeight: 800, color: '#1d2030', marginBottom: 4 }}>📣 ช่วยกระจายข่าวเว็บไซต์</div>
+          <div style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 14 }}>ยิ่งคนรู้จัก ยิ่งช่วยน้องๆ ได้มาก</div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <ShareButtons
+              url="https://punruksa.petgo.asia"
+              title="ปันรักษา — กองทุนรักษาสัตว์โดยชุมชน"
+              text="ปันรักษา — กองทุนรักษาสัตว์โดยชุมชน เปิดเคสขอค่ารักษา โปร่งใส ตรวจสอบได้ 🐾"
+            />
+          </div>
+        </div>
       </section>
 
       {/* CTA */}
@@ -270,11 +352,45 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* SUPPORT PLATFORM CARD */}
+      <section className="wrap" style={{ padding: '0 22px 64px' }}>
+        <Link href="/support-platform" style={{ display: 'block', color: 'inherit' }}>
+          <div
+            className="tjcard"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
+              padding: '24px 26px',
+              background: 'linear-gradient(135deg,#eef0fd,#f6f7ff)',
+              border: '1px solid #dfe3fb',
+            }}
+          >
+            <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0 }}>☕️</div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#1d2030' }}>สนับสนุนค่าดูแลระบบ</div>
+              <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
+                เงินกองทุน 100% ไปค่ารักษาสัตว์ — ค่าเซิร์ฟเวอร์ &amp; ดูแลระบบมาจากผู้สนับสนุนที่สมัครใจ (แยกบัญชีชัดเจน)
+              </div>
+            </div>
+            <span
+              style={{
+                flexShrink: 0, background: '#667eea', color: '#fff',
+                padding: '11px 22px', borderRadius: 12, fontWeight: 700, fontSize: 14.5, whiteSpace: 'nowrap',
+              }}
+            >
+              ดูรายละเอียด →
+            </span>
+          </div>
+        </Link>
+      </section>
+
       {/* FOOTER */}
       <footer style={{ borderTop: '1px solid var(--line)', background: '#fff' }}>
         <div className="wrap" style={{ padding: '28px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', color: 'var(--muted)', fontSize: 13.5 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: 'var(--ink)' }}>🐾 {d.brand} · <span style={{ fontWeight: 500, color: 'var(--muted)' }}>{d.footer.tag}</span></div>
-          <div>{d.footer.mvp}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <Link href="/support-platform" style={{ color: 'var(--muted)', fontWeight: 600 }}>☕️ สนับสนุนค่าดูแลระบบ</Link>
+            <span>{d.footer.mvp}</span>
+          </div>
         </div>
       </footer>
     </div>

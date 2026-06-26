@@ -41,6 +41,22 @@ export async function changePassword(prevState: unknown, formData: FormData) {
   return { success: true, msg: 'เปลี่ยนรหัสผ่านเรียบร้อย' }
 }
 
+// ---------- ยกเลิกการเชื่อมต่อ LINE ----------
+export async function disconnectLine() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'กรุณาเข้าสู่ระบบ' }
+
+  const { error } = await supabase.from('users').update({ line_user_id: null }).eq('id', user.id)
+  if (error) return { error: 'ยกเลิกการเชื่อมต่อไม่สำเร็จ: ' + error.message }
+
+  await supabase.from('audit_log').insert({ actor_id: user.id, action: 'line_disconnected', details: {} })
+  revalidatePath('/dashboard/profile')
+  return { success: true, msg: 'ยกเลิกการเชื่อมต่อ LINE แล้ว' }
+}
+
 // ---------- ขอเป็นกรรมการ (approver) ----------
 export async function requestApproverRole() {
   const supabase = await createClient()

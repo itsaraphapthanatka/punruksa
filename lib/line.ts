@@ -30,6 +30,12 @@ export function lineAuthorizeUrl(state: string): string {
   return `${AUTHORIZE_URL}?${p.toString()}`
 }
 
+// prefix สำหรับ state ในโหมด "เชื่อมต่อบัญชี" (ผู้ใช้ login อยู่แล้ว ต้องการผูก LINE)
+// ใช้ callback เดียวกับ login เพื่อไม่ต้องลงทะเบียน redirect_uri เพิ่มใน LINE console
+export const LINE_LINK_PREFIX = 'link:'
+export const isLinkState = (state: string | null | undefined): boolean =>
+  typeof state === 'string' && state.startsWith(LINE_LINK_PREFIX)
+
 export async function lineExchangeToken(code: string): Promise<{ access_token?: string; id_token?: string } | null> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -90,6 +96,23 @@ export async function pushLineText(userId: string, text: string): Promise<boolea
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ to: userId, messages: [{ type: 'text', text }] }),
+    })
+    return r.ok
+  } catch {
+    return false
+  }
+}
+
+// ส่ง Flex Message (การ์ดมีรูป) หา userId เดียว — best effort
+// contents = Flex bubble/carousel object; altText = ข้อความสำรองเวลาแสดงเป็น notification
+export async function pushLineFlex(userId: string, altText: string, contents: unknown): Promise<boolean> {
+  const token = process.env.LINE_MESSAGING_TOKEN
+  if (!token || !userId) return false
+  try {
+    const r = await fetch(PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ to: userId, messages: [{ type: 'flex', altText: altText.slice(0, 400), contents }] }),
     })
     return r.ok
   } catch {

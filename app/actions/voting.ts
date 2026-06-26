@@ -70,7 +70,7 @@ export async function openVoteRound(caseId: string) {
   // Fetch case
   const { data: caseData, error: caseError } = await supabase
     .from('cases')
-    .select('id, mode, created_by, status')
+    .select('id, mode, created_by, status, title, animal_type, requested_amount')
     .eq('id', caseId)
     .single()
 
@@ -173,17 +173,89 @@ export async function openVoteRound(caseId: string) {
     caseId
   )
 
-  // แจ้งเตือนกรรมการที่ล็อกอินด้วย LINE (best effort — ไม่ทำให้เปิดรอบล้มถ้าส่งไม่ได้)
+  // แจ้งเตือนกรรมการผ่าน LINE — Flex Message การ์ดมีรูปเคส (best effort — ไม่ทำให้เปิดรอบล้มถ้าส่งไม่ได้)
+  // ใช้ line_user_id ที่ผูกไว้ (เชื่อมต่อที่หน้าโปรไฟล์) ก่อน — ถ้าไม่มีค่อย fallback ไป email สังเคราะห์ของคน login ด้วย LINE
   try {
-    const { lineMessagingConfigured, lineUserIdFromEmail, pushLineText, siteUrl } = await import('@/lib/line')
+    const { lineMessagingConfigured, lineUserIdFromEmail, pushLineFlex, siteUrl } = await import('@/lib/line')
     if (lineMessagingConfigured()) {
-      const { data: sampledUsers } = await supabase.from('users').select('id, email').in('id', sampled.map((a) => a.id))
-      const link = `${siteUrl()}/dashboard/vote`
-      const msg = `🐾 ปันรักษา\nคุณถูกสุ่มเป็น "กรรมการ" พิจารณาเคสใหม่!\nช่วยอ่านรายละเอียดและลงมติภายในเวลาที่กำหนด 🗳️\n${link}`
+      const base = siteUrl()
+      const link = `${base}/dashboard/vote`
+
+      // รูปปกเคส (รูปแรก doc_type=photo) — fallback เป็นโลโก้ถ้าไม่มี
+      const { data: coverDoc } = await supabase
+        .from('case_documents')
+        .select('file_url')
+        .eq('case_id', caseId)
+        .eq('doc_type', 'photo')
+        .limit(1)
+        .maybeSingle()
+      const heroUrl = coverDoc?.file_url || `${base}/logo.jpg`
+
+      const closesText = closesAt.toLocaleString('th-TH', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+      })
+      const amountText = Number(caseData.requested_amount).toLocaleString() + ' บาท'
+      const title = caseData.title || 'เคสใหม่'
+
+      const infoRow = (label: string, value: string, color = '#1d2030') => ({
+        type: 'box', layout: 'baseline', spacing: 'sm',
+        contents: [
+          { type: 'text', text: label, color: '#9aa0b8', size: 'sm', flex: 2 },
+          { type: 'text', text: value, color, size: 'sm', weight: 'bold', flex: 4, wrap: true },
+        ],
+      })
+
+      const bubble = {
+        type: 'bubble',
+        hero: {
+          type: 'image',
+          url: heroUrl,
+          size: 'full',
+          aspectRatio: '20:13',
+          aspectMode: 'cover',
+          action: { type: 'uri', uri: link },
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'md',
+          contents: [
+            { type: 'text', text: '🐾 ปันรักษา · รอบโหวตใหม่', size: 'xs', weight: 'bold', color: '#9166e8' },
+            { type: 'text', text: title, weight: 'bold', size: 'lg', wrap: true },
+            {
+              type: 'box', layout: 'vertical', margin: 'md', spacing: 'sm',
+              contents: [
+                infoRow('ชนิดสัตว์', caseData.animal_type || '-'),
+                infoRow('ยอดที่ขอ', amountText, '#127a52'),
+                infoRow('โหมด', isEmergency ? '🚨 ฉุกเฉิน' : 'ปกติ', isEmergency ? '#c2410c' : '#1d2030'),
+                infoRow('ปิดโหวต', closesText),
+              ],
+            },
+            { type: 'text', text: 'คุณถูกสุ่มเป็นกรรมการพิจารณาเคสนี้ — ช่วยลงมติภายในเวลาที่กำหนด 🗳️', size: 'xs', color: '#717892', wrap: true, margin: 'md' },
+          ],
+        },
+        footer: {
+          type: 'box', layout: 'vertical',
+          contents: [
+            { type: 'button', style: 'primary', color: '#667eea', height: 'sm',
+              action: { type: 'uri', label: 'พิจารณาเคสนี้', uri: link } },
+          ],
+        },
+      }
+      const altText = `🐾 ปันรักษา: คุณถูกสุ่มเป็นกรรมการพิจารณาเคส "${title}" — ลงมติได้ที่ ${link}`
+
+      const ids = sampled.map((a) => a.id)
+      // เผื่อ migration 012 ยังไม่ลง (ไม่มี column line_user_id) → fallback select แบบไม่มี column นั้น
+      let sampledUsers: { id: string; email: string; line_user_id?: string | null }[] = []
+      const withCol = await supabase.from('users').select('id, email, line_user_id').in('id', ids)
+      if (withCol.error) {
+        const basic = await supabase.from('users').select('id, email').in('id', ids)
+        sampledUsers = (basic.data || []) as typeof sampledUsers
+      } else {
+        sampledUsers = (withCol.data || []) as typeof sampledUsers
+      }
       await Promise.allSettled(
-        (sampledUsers || []).map((u) => {
-          const lid = lineUserIdFromEmail(u.email)
-          return lid ? pushLineText(lid, msg) : Promise.resolve(false)
+        sampledUsers.map((u) => {
+          const lid = u.line_user_id || lineUserIdFromEmail(u.email)
+          return lid ? pushLineFlex(lid, altText, bubble) : Promise.resolve(false)
         })
       )
     }

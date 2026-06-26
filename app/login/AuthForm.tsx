@@ -67,8 +67,9 @@ export default function AuthForm({
         <div style={{ position: 'absolute', fontSize: 120, bottom: 40, right: 48, opacity: 0.16, animation: 'afFloat 5s ease-in-out infinite' }}>🐾</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><circle cx="6.5" cy="9" r="2.1" /><circle cx="11" cy="6.2" r="2.1" /><circle cx="16" cy="6.2" r="2.1" /><circle cx="20" cy="9.6" r="1.9" /><path d="M13 12c-2.3 0-3.7 1.5-4.8 2.9C7 16.4 5.4 17.4 5.4 19.2 5.4 20.8 6.7 22 8.4 22c1.3 0 2.4-.6 3.4-.6.9 0 2 .6 3.4.6 1.7 0 3-1.2 3-2.8 0-1.8-1.6-2.8-2.8-4.3C14.5 13.5 13.1 12 13 12z" /></svg>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fff', overflow: 'hidden', display: 'flex', flex: 'none' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.jpg" alt="ปันรักษา" width={42} height={42} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.2px' }}>ปันรักษา</div>
         </div>

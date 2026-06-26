@@ -1,9 +1,52 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { getLocale, localeTag } from '@/lib/i18n'
 import { dict, statusTag, animalIcon, STEP_KEYS, caseStep } from '@/lib/dict'
-import { LanguageSwitcher } from '../../LanguageSwitcher'
+import { ShareButtons } from '../../ShareButtons'
+import { NavMenu } from '../../NavMenu'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: c } = await supabase
+    .from('cases')
+    .select('title, symptoms, animal_type')
+    .eq('id', id)
+    .single()
+  if (!c) return { title: 'เคสไม่พบ — ปันรักษา' }
+
+  const { data: docs } = await supabase
+    .from('case_documents')
+    .select('file_url, doc_type')
+    .eq('case_id', id)
+    .eq('doc_type', 'photo')
+    .limit(1)
+  const cover = docs?.[0]?.file_url
+  const desc = (c.symptoms || '').replace(/\*\*\*.*?\*\*\*/g, '').trim().slice(0, 200)
+  const url = `https://punruksa.petgo.asia/cases/${id}`
+
+  return {
+    title: `${c.title} — ปันรักษา`,
+    description: desc,
+    openGraph: {
+      title: c.title,
+      description: desc,
+      url,
+      siteName: 'ปันรักษา',
+      images: cover ? [{ url: cover }] : [{ url: '/logo.jpg' }],
+      locale: 'th_TH',
+      type: 'article',
+    },
+    twitter: {
+      card: cover ? 'summary_large_image' : 'summary',
+      title: c.title,
+      description: desc,
+      images: cover ? [cover] : ['/logo.jpg'],
+    },
+  }
+}
 
 export default async function PublicCasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -46,15 +89,22 @@ export default async function PublicCasePage({ params }: { params: Promise<{ id:
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--line)' }}>
         <div className="pc-wrap" style={{ display: 'flex', alignItems: 'center', gap: 14, height: 64 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#26282e' }}>
-            <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--ind)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><circle cx="6.5" cy="9" r="2.1" /><circle cx="11" cy="6.2" r="2.1" /><circle cx="16" cy="6.2" r="2.1" /><circle cx="20" cy="9.6" r="1.9" /><path d="M13 12c-2.3 0-3.7 1.5-4.8 2.9C7 16.4 5.4 17.4 5.4 19.2 5.4 20.8 6.7 22 8.4 22c1.3 0 2.4-.6 3.4-.6.9 0 2 .6 3.4.6 1.7 0 3-1.2 3-2.8 0-1.8-1.6-2.8-2.8-4.3C14.5 13.5 13.1 12 13 12z" /></svg>
+            <span style={{ width: 34, height: 34, borderRadius: 10, background: '#fff', overflow: 'hidden', display: 'flex' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.jpg" alt="ปันรักษา" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </span>
             <span style={{ fontWeight: 800, fontSize: 17 }}>{d.brand}</span>
           </Link>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <LanguageSwitcher locale={L} />
-            <Link href="/" className="pc-link" style={{ color: '#41454d', fontWeight: 600, fontSize: 14.5 }}>{d.nav.allCases}</Link>
-          </div>
+          <NavMenu
+            items={[
+              { href: '/', label: d.nav.home },
+              { href: '/cases', label: d.nav.cases },
+              { href: '/#how', label: d.nav.how },
+              { href: '/login', label: d.nav.login },
+            ]}
+            donateLabel={d.nav.donate}
+            locale={L}
+          />
         </div>
       </nav>
 
@@ -170,6 +220,18 @@ export default async function PublicCasePage({ params }: { params: Promise<{ id:
                 <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', margin: '2px 0 0' }}>{Number(c.requested_amount).toLocaleString()} <span style={{ fontSize: 16, color: 'var(--muted)' }}>{cp.baht}</span></div>
                 <Link href="/donate" className="pc-btn" style={{ display: 'block', textAlign: 'center', marginTop: 16, padding: '14px', borderRadius: 12, fontWeight: 800, fontSize: 16 }}>{cp.donate}</Link>
                 <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6, textAlign: 'center' }}>{cp.poolNote}</div>
+
+                <div style={{ borderTop: '1px solid var(--line)', marginTop: 18, paddingTop: 16 }}>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>🔗 ช่วยกระจายเคสนี้</div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <ShareButtons
+                      url={`https://punruksa.petgo.asia/cases/${c.id}`}
+                      title={c.title}
+                      text={`${c.title} — ร่วมช่วยเหลือผ่าน ปันรักษา`}
+                      compact
+                    />
+                  </div>
+                </div>
               </div>
               <div style={{ borderTop: '1px solid var(--line)', marginTop: 18, paddingTop: 16, fontSize: 13, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div>{cp.b1}</div><div>{cp.b2}</div><div>{cp.b3}</div>

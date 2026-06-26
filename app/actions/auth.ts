@@ -128,7 +128,7 @@ export async function authenticate(prevState: unknown, formData: FormData) {
 }
 
 // ---------- Logout ----------
-export async function logout() {
+export async function logout(formData?: FormData) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -139,5 +139,9 @@ export async function logout() {
 
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
-  redirect('/login')
+
+  // ปลายทางหลัง logout (default /login) — ต้องเป็น path ภายในเท่านั้น
+  const raw = formData?.get('redirectTo')
+  const dest = typeof raw === 'string' && raw.startsWith('/') ? raw : '/login'
+  redirect(dest)
 }
